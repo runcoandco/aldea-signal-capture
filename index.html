@@ -75,6 +75,50 @@
   }
   .screen-header .brand { margin-bottom: 8px; }
 
+  .splash-logo {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    margin-bottom: 18px;
+  }
+
+  .inline-logo {
+    width: 148px;
+    height: auto;
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0 18px;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 0.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text-mid);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .icon-btn:active { background: var(--accent-light); }
+
   .card {
     background: var(--surface);
     border: 0.5px solid var(--border);
@@ -165,6 +209,80 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+  }
+
+  /* Home */
+  .home-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .section-title {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-mid);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .overdue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .overdue-table {
+    display: grid;
+    gap: 6px;
+  }
+
+  .overdue-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 10px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 11px;
+    background: var(--surface);
+  }
+
+  .overdue-buyer {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--error);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .overdue-days {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--error);
+    white-space: nowrap;
+  }
+
+  .overdue-stage,
+  .overdue-date {
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  .overdue-action {
+    grid-column: 1 / -1;
+    font-size: 14px;
+    color: var(--text-mid);
+    line-height: 1.35;
+  }
+
+  .empty-state {
+    font-size: 14px;
+    color: var(--text-light);
+    text-align: center;
+    padding: 24px 12px;
   }
 
   /* Gate */
@@ -376,7 +494,7 @@
 <div class="screen active" id="screen-gate">
   <div class="gate-center">
     <div class="screen-header">
-      <p class="brand">aldea</p>
+      <img class="splash-logo" src="assets/aldea-square.jpeg" alt="ALDEA">
       <h1>Lead Tracker</h1>
     </div>
     <div style="width: 100%; max-width: 280px;">
@@ -387,10 +505,34 @@
   </div>
 </div>
 
+<!-- ===== SCREEN 2: HOME ===== -->
+<div class="screen" id="screen-home">
+  <div class="app-header">
+    <div>
+      <img class="inline-logo" src="assets/aldea-inline.png" alt="ALDEA Comporta">
+      <h1 style="font-size: 18px;">Lead Tracker</h1>
+    </div>
+    <div class="header-actions">
+      <button class="submitter-chip" id="home-submitter-display" onclick="changeIdentity()"></button>
+    </div>
+  </div>
+
+  <div class="home-actions">
+    <button class="btn btn-primary" onclick="startLog()">Log signal</button>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Overdue actions</div>
+    <div class="overdue-list" id="overdue-list">
+      <div class="empty-state"><span class="spinner"></span> Loading actions...</div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== SCREEN 2: IDENTITY ===== -->
 <div class="screen" id="screen-identity">
   <div class="screen-header">
-    <p class="brand">aldea</p>
+    <img class="inline-logo" src="assets/aldea-inline.png" alt="ALDEA Comporta" style="margin: 0 auto 8px;">
     <h1>Who is logging?</h1>
   </div>
   <div class="card">
@@ -407,12 +549,17 @@
 
 <!-- ===== SCREEN 3: FORM ===== -->
 <div class="screen" id="screen-form">
-  <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0 18px;">
+  <div class="app-header">
     <div>
-      <p class="brand" style="font-size: 11px; margin-bottom: 2px;">aldea</p>
+      <img class="inline-logo" src="assets/aldea-inline.png" alt="ALDEA Comporta">
       <h1 style="font-size: 18px;">Lead Tracker</h1>
     </div>
-    <button class="submitter-chip" id="submitter-display" onclick="changeIdentity()"></button>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="goHome()" aria-label="Home">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
+      </button>
+      <button class="submitter-chip" id="submitter-display" onclick="changeIdentity()"></button>
+    </div>
   </div>
 
   <div class="card" style="position: relative;">
@@ -505,7 +652,7 @@
     <p style="font-size: 14px; color: var(--text-mid); font-weight: 300;" id="confirm-detail"></p>
     <div style="width: 100%; max-width: 280px; margin-top: 16px;">
       <button class="btn btn-primary" style="margin-bottom: 8px;" onclick="logAnother()">Log another</button>
-      <button class="btn btn-secondary" onclick="showScreen('screen-form')">Back</button>
+      <button class="btn btn-secondary" onclick="goHome()">Home</button>
     </div>
   </div>
 </div>
@@ -522,6 +669,7 @@ var PASSWORD = 'aldea2026';
 // ============================================================
 var allLeads = [];
 var allOwners = [];
+var allOverdueActions = [];
 var allSources = ['Inner Community','Founder Network','Event / Experience','Partner Lead','Referral','Inbound','Other'];
 var selectedLead = null;
 var currentSubmitter = null;
@@ -533,6 +681,24 @@ var dataLoaded = false;
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
+}
+
+function updateSubmitterDisplays() {
+  ['submitter-display', 'home-submitter-display'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = currentSubmitter || '';
+  });
+}
+
+function startLog() {
+  resetForm();
+  showScreen('screen-form');
+}
+
+function goHome() {
+  resetForm();
+  renderOverdueActions();
+  showScreen('screen-home');
 }
 
 // ============================================================
@@ -547,8 +713,8 @@ function checkPassword() {
     var saved = localStorage.getItem('aldea_submitter');
     if (saved) {
       currentSubmitter = saved;
-      document.getElementById('submitter-display').textContent = saved;
-      showScreen('screen-form');
+      updateSubmitterDisplays();
+      showScreen('screen-home');
     } else {
       showScreen('screen-identity');
     }
@@ -571,9 +737,11 @@ function fetchData() {
       if (data.success) {
         allLeads = data.leads || [];
         allOwners = data.owners || [];
+        allOverdueActions = data.overdueActions || [];
         dataLoaded = true;
         renderIdentityButtons();
         renderOwnerDropdowns();
+        renderOverdueActions();
       }
     })
     .catch(function(err) { console.error('Fetch error:', err); });
@@ -596,8 +764,8 @@ function renderIdentityButtons() {
 function selectIdentity(name) {
   currentSubmitter = name;
   localStorage.setItem('aldea_submitter', name);
-  document.getElementById('submitter-display').textContent = name;
-  showScreen('screen-form');
+  updateSubmitterDisplays();
+  showScreen('screen-home');
 }
 function changeIdentity() {
   if (dataLoaded) renderIdentityButtons();
@@ -722,6 +890,58 @@ function renderOwnerDropdowns() {
   }
 }
 
+function renderOverdueActions() {
+  var container = document.getElementById('overdue-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!dataLoaded) {
+    container.innerHTML = '<div class="empty-state"><span class="spinner"></span> Loading actions...</div>';
+    return;
+  }
+
+  if (!allOverdueActions.length) {
+    container.innerHTML = '<div class="empty-state">No overdue actions.</div>';
+    return;
+  }
+
+  var table = document.createElement('div');
+  table.className = 'overdue-table';
+
+  allOverdueActions.slice(0, 12).forEach(function(item) {
+    var row = document.createElement('div');
+    row.className = 'overdue-row';
+
+    var buyer = document.createElement('div');
+    buyer.className = 'overdue-buyer';
+    buyer.textContent = item.buyerName || item.leadName || 'Unnamed buyer';
+
+    var days = document.createElement('div');
+    days.className = 'overdue-days';
+    days.textContent = (item.daysOverdue || 0) + 'd overdue';
+
+    var stage = document.createElement('div');
+    stage.className = 'overdue-stage';
+    stage.textContent = item.stage || '';
+
+    var date = document.createElement('span');
+    date.className = 'overdue-date';
+    date.textContent = item.dueDate || item.nextActionDate || 'No date';
+
+    var action = document.createElement('div');
+    action.className = 'overdue-action';
+    action.textContent = item.nextAction || 'No action';
+
+    row.appendChild(buyer);
+    row.appendChild(days);
+    row.appendChild(stage);
+    row.appendChild(date);
+    row.appendChild(action);
+    table.appendChild(row);
+  });
+  container.appendChild(table);
+}
+
 // ============================================================
 // Submit signal
 // ============================================================
@@ -772,17 +992,25 @@ function submitSignal() {
 // ============================================================
 // Post-submit
 // ============================================================
-function logAnother() {
+function resetForm() {
   selectedLead = null;
   document.getElementById('lead-search').value = '';
   document.getElementById('lead-search').style.display = '';
   document.getElementById('selected-lead').classList.remove('visible');
+  document.getElementById('search-results').classList.remove('visible');
   document.querySelector('.add-lead-trigger').style.display = '';
+  document.getElementById('new-lead-form').classList.remove('visible');
+  document.getElementById('new-lead-name').value = '';
+  document.getElementById('new-lead-error').textContent = '';
   document.getElementById('what-happened').value = '';
   document.getElementById('next-action').value = '';
   document.getElementById('next-action-date').value = '';
   document.getElementById('form-error').textContent = '';
   if (currentSubmitter) document.getElementById('next-action-owner').value = currentSubmitter;
+}
+
+function logAnother() {
+  resetForm();
   showScreen('screen-form');
 }
 
@@ -795,8 +1023,8 @@ function logAnother() {
     var saved = localStorage.getItem('aldea_submitter');
     if (saved) {
       currentSubmitter = saved;
-      document.getElementById('submitter-display').textContent = saved;
-      showScreen('screen-form');
+      updateSubmitterDisplays();
+      showScreen('screen-home');
     } else {
       showScreen('screen-identity');
     }
