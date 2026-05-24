@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ALDEA Lead Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F4F0;
+    --surface: #FFFFFF;
+    --surface-warm: #F0ECE6;
+    --text: #3D3529;
+    --text-mid: #8B6C59;
+    --text-light: #BDB6AA;
+    --border: rgba(139,108,89,0.15);
+    --border-focus: #A48972;
+    --accent: #8B6C59;
+    --accent-hover: #6B503F;
+    --accent-light: #F0ECE6;
+    --accent-warm: #A48972;
+    --sage: #A5A78D;
+    --sage-light: #EAEBE2;
+    --success: #5A7A52;
+    --success-bg: #E8EDE6;
+    --error: #A0453A;
+    --error-bg: #F5E6E4;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --font-head: 'Lato', sans-serif;
+    --font-body: 'Barlow', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .screen {
+    display: none;
+    flex-direction: column;
+    min-height: 100dvh;
+    padding: 24px 20px;
+    max-width: 440px;
+    margin: 0 auto;
+  }
+  .screen.active { display: flex; }
+
+  .brand {
+    font-family: var(--font-head);
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent-warm);
+  }
+
+  h1 {
+    font-family: var(--font-head);
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+
+  .screen-header {
+    text-align: center;
+    padding: 48px 0 32px;
+  }
+  .screen-header .brand { margin-bottom: 8px; }
+
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    flex: 1;
+  }
+
+  label {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-mid);
+    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="date"],
+  textarea,
+  select {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--text);
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--text-light);
+    font-weight: 300;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--border-focus);
+  }
+  textarea {
+    resize: vertical;
+    min-height: 88px;
+    line-height: 1.5;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%238B6C59' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  .btn {
+    display: block;
+    width: 100%;
+    font-family: var(--font-head);
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    padding: 13px 16px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-mid);
+    border: 0.5px solid var(--border);
+  }
+
+  .field-group { margin-bottom: 18px; }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Gate */
+  .gate-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 0 20px;
+  }
+
+  /* Identity */
+  .identity-btn {
+    display: block;
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 400;
+    padding: 14px 16px;
+    background: var(--surface);
+    color: var(--text);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s;
+    margin-bottom: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .identity-btn:active {
+    background: var(--accent-light);
+    border-color: var(--accent-warm);
+  }
+
+  /* Lead search */
+  .search-wrapper { position: relative; }
+  .search-results {
+    position: absolute;
+    left: 0; right: 0; top: 100%;
+    z-index: 10;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 4px;
+    display: none;
+    box-shadow: 0 4px 12px rgba(139,108,89,0.08);
+  }
+  .search-results.visible { display: block; }
+  .search-result-item {
+    padding: 11px 14px;
+    font-size: 15px;
+    cursor: pointer;
+    border-bottom: 0.5px solid var(--border);
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s;
+  }
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item:active { background: var(--accent-light); }
+
+  .selected-lead {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 14px;
+    background: var(--accent-light);
+    border: 0.5px solid rgba(139,108,89,0.2);
+    border-radius: var(--radius);
+    margin-top: 4px;
+  }
+  .selected-lead.visible { display: flex; }
+  .selected-lead span {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .selected-lead button {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-mid);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+
+  /* Add lead inline */
+  .add-lead-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--accent-warm);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 0;
+    margin-top: 4px;
+  }
+  .add-lead-trigger:hover { color: var(--accent); }
+
+  .new-lead-form {
+    display: none;
+    margin-top: 8px;
+    padding: 14px;
+    background: var(--surface-warm);
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+  }
+  .new-lead-form.visible { display: block; }
+  .new-lead-form .field-group { margin-bottom: 12px; }
+  .new-lead-form .field-group:last-of-type { margin-bottom: 14px; }
+  .new-lead-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* Confirmation */
+  .confirm-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+  }
+  .confirm-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--success-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .confirm-icon svg {
+    width: 26px;
+    height: 26px;
+    stroke: var(--success);
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* States */
+  .error-msg {
+    font-size: 13px;
+    color: var(--error);
+    text-align: center;
+    min-height: 18px;
+    margin-top: 8px;
+  }
+  .loading-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.88);
+    border-radius: var(--radius-lg);
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--text-mid);
+    z-index: 20;
+  }
+  .loading-overlay.visible { display: flex; }
+
+  .submitter-chip {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--accent-warm);
+    background: var(--accent-light);
+    border: none;
+    border-radius: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .submitter-chip:hover { background: var(--surface-warm); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  .divider {
+    height: 0.5px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== SCREEN 1: GATE ===== -->
+<div class="screen active" id="screen-gate">
+  <div class="gate-center">
+    <div class="screen-header">
+      <p class="brand">aldea</p>
+      <h1>Lead Tracker</h1>
+    </div>
+    <div style="width: 100%; max-width: 280px;">
+      <input type="password" id="password-input" placeholder="Password" style="text-align: center;" autocomplete="off">
+      <div class="error-msg" id="gate-error"></div>
+    </div>
+    <button class="btn btn-primary" style="max-width: 280px;" onclick="checkPassword()">Enter</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN 2: IDENTITY ===== -->
+<div class="screen" id="screen-identity">
+  <div class="screen-header">
+    <p class="brand">aldea</p>
+    <h1>Who is logging?</h1>
+  </div>
+  <div class="card">
+    <div id="identity-list">
+      <p style="font-size: 14px; color: var(--text-light); text-align: center; padding: 24px;">
+        <span class="spinner"></span> Loading team...
+      </p>
+    </div>
+    <p style="font-size: 12px; color: var(--text-light); text-align: center; margin-top: 14px; font-weight: 300;">
+      Remembered for next time
+    </p>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: FORM ===== -->
+<div class="screen" id="screen-form">
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0 18px;">
+    <div>
+      <p class="brand" style="font-size: 11px; margin-bottom: 2px;">aldea</p>
+      <h1 style="font-size: 18px;">Lead Tracker</h1>
+    </div>
+    <button class="submitter-chip" id="submitter-display" onclick="changeIdentity()"></button>
+  </div>
+
+  <div class="card" style="position: relative;">
+
+    <!-- Lead selection -->
+    <div class="field-group">
+      <label>Lead</label>
+      <div class="search-wrapper">
+        <input type="text" id="lead-search" placeholder="Search leads..." autocomplete="off" oninput="filterLeads()" onfocus="showResults()">
+        <div class="search-results" id="search-results"></div>
+      </div>
+      <div class="selected-lead" id="selected-lead">
+        <span id="selected-lead-name"></span>
+        <button onclick="clearLead()">Change</button>
+      </div>
+      <button class="add-lead-trigger" onclick="toggleNewLead()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/></svg>
+        New lead
+      </button>
+
+      <!-- New lead inline form -->
+      <div class="new-lead-form" id="new-lead-form">
+        <div class="field-group">
+          <label>Name</label>
+          <input type="text" id="new-lead-name" placeholder="Full name">
+        </div>
+        <div class="new-lead-row">
+          <div class="field-group">
+            <label>Owner</label>
+            <select id="new-lead-owner"></select>
+          </div>
+          <div class="field-group">
+            <label>Source</label>
+            <select id="new-lead-source">
+              <option>Inner Community</option>
+              <option>Founder Network</option>
+              <option>Event / Experience</option>
+              <option>Partner Lead</option>
+              <option>Referral</option>
+              <option>Inbound</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="createNewLead()" id="create-lead-btn">Add lead</button>
+        <div class="error-msg" id="new-lead-error"></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Signal fields -->
+    <div class="field-group">
+      <label>What happened?</label>
+      <textarea id="what-happened" placeholder="Met at the plot, loved the cabanas, wants to come back with husband in July..." rows="4"></textarea>
+    </div>
+
+    <div class="field-group">
+      <label>Next action</label>
+      <input type="text" id="next-action" placeholder="Schedule follow-up call">
+    </div>
+
+    <div class="field-row" style="margin-bottom: 22px;">
+      <div>
+        <label>When</label>
+        <input type="date" id="next-action-date">
+      </div>
+      <div>
+        <label>Owner</label>
+        <select id="next-action-owner"></select>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="submit-btn" onclick="submitSignal()">Log</button>
+    <div class="error-msg" id="form-error"></div>
+
+    <div class="loading-overlay" id="form-loading">
+      <span><span class="spinner"></span> Saving...</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 4: CONFIRM ===== -->
+<div class="screen" id="screen-confirm">
+  <div class="confirm-center">
+    <div class="confirm-icon">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h1>Logged</h1>
+    <p style="font-size: 14px; color: var(--text-mid); font-weight: 300;" id="confirm-detail"></p>
+    <div style="width: 100%; max-width: 280px; margin-top: 16px;">
+      <button class="btn btn-primary" style="margin-bottom: 8px;" onclick="logAnother()">Log another</button>
+      <button class="btn btn-secondary" onclick="showScreen('screen-form')">Back</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzSJk_4tzxMFXJeJ5LZUxgbcGOcYfdHFb6CQCJvhfaP164KZTXcDVyU54UaIQii8BKr5w/exec';
+var PASSWORD = 'aldea2026';
+
+// ============================================================
+// State
+// ============================================================
+var allLeads = [];
+var allOwners = [];
+var allSources = ['Inner Community','Founder Network','Event / Experience','Partner Lead','Referral','Inbound','Other'];
+var selectedLead = null;
+var currentSubmitter = null;
+var dataLoaded = false;
+
+// ============================================================
+// Navigation
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+
+// ============================================================
+// Screen 1: Password
+// ============================================================
+function checkPassword() {
+  var input = document.getElementById('password-input').value;
+  if (input === PASSWORD) {
+    localStorage.setItem('aldea_auth', 'true');
+    document.getElementById('gate-error').textContent = '';
+    fetchData();
+    var saved = localStorage.getItem('aldea_submitter');
+    if (saved) {
+      currentSubmitter = saved;
+      document.getElementById('submitter-display').textContent = saved;
+      showScreen('screen-form');
+    } else {
+      showScreen('screen-identity');
+    }
+  } else {
+    document.getElementById('gate-error').textContent = 'Incorrect password';
+  }
+}
+document.getElementById('password-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') checkPassword();
+});
+
+// ============================================================
+// Data fetch
+// ============================================================
+function fetchData() {
+  if (dataLoaded) return;
+  fetch(SCRIPT_URL)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        allLeads = data.leads || [];
+        allOwners = data.owners || [];
+        dataLoaded = true;
+        renderIdentityButtons();
+        renderOwnerDropdowns();
+      }
+    })
+    .catch(function(err) { console.error('Fetch error:', err); });
+}
+
+// ============================================================
+// Screen 2: Identity
+// ============================================================
+function renderIdentityButtons() {
+  var container = document.getElementById('identity-list');
+  container.innerHTML = '';
+  allOwners.forEach(function(name) {
+    var btn = document.createElement('button');
+    btn.className = 'identity-btn';
+    btn.textContent = name;
+    btn.onclick = function() { selectIdentity(name); };
+    container.appendChild(btn);
+  });
+}
+function selectIdentity(name) {
+  currentSubmitter = name;
+  localStorage.setItem('aldea_submitter', name);
+  document.getElementById('submitter-display').textContent = name;
+  showScreen('screen-form');
+}
+function changeIdentity() {
+  if (dataLoaded) renderIdentityButtons();
+  showScreen('screen-identity');
+}
+
+// ============================================================
+// Screen 3: Lead search
+// ============================================================
+function filterLeads() {
+  var query = document.getElementById('lead-search').value.toLowerCase().trim();
+  var container = document.getElementById('search-results');
+  if (query.length < 1) { container.classList.remove('visible'); return; }
+  var matches = allLeads.filter(function(n) { return n.toLowerCase().indexOf(query) !== -1; }).slice(0, 10);
+  container.innerHTML = '';
+  matches.forEach(function(name) {
+    var div = document.createElement('div');
+    div.className = 'search-result-item';
+    div.textContent = name;
+    div.onclick = function() { selectLead(name); };
+    container.appendChild(div);
+  });
+  container.classList.toggle('visible', matches.length > 0);
+}
+function showResults() {
+  var query = document.getElementById('lead-search').value.trim();
+  if (query.length >= 1) filterLeads();
+}
+function selectLead(name) {
+  selectedLead = name;
+  document.getElementById('lead-search').style.display = 'none';
+  document.getElementById('search-results').classList.remove('visible');
+  document.getElementById('selected-lead-name').textContent = name;
+  document.getElementById('selected-lead').classList.add('visible');
+  document.querySelector('.add-lead-trigger').style.display = 'none';
+  document.getElementById('new-lead-form').classList.remove('visible');
+}
+function clearLead() {
+  selectedLead = null;
+  document.getElementById('lead-search').value = '';
+  document.getElementById('lead-search').style.display = '';
+  document.getElementById('selected-lead').classList.remove('visible');
+  document.querySelector('.add-lead-trigger').style.display = '';
+  document.getElementById('lead-search').focus();
+}
+
+document.addEventListener('click', function(e) {
+  var search = document.getElementById('lead-search');
+  var results = document.getElementById('search-results');
+  if (!search.contains(e.target) && !results.contains(e.target)) {
+    results.classList.remove('visible');
+  }
+});
+
+// ============================================================
+// New lead
+// ============================================================
+function toggleNewLead() {
+  var form = document.getElementById('new-lead-form');
+  form.classList.toggle('visible');
+  if (form.classList.contains('visible')) {
+    document.getElementById('new-lead-name').focus();
+  }
+}
+function createNewLead() {
+  var name = document.getElementById('new-lead-name').value.trim();
+  var errEl = document.getElementById('new-lead-error');
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = 'Enter a name'; return; }
+  if (allLeads.indexOf(name) !== -1) { errEl.textContent = 'Lead already exists'; return; }
+
+  var owner = document.getElementById('new-lead-owner').value;
+  var source = document.getElementById('new-lead-source').value;
+
+  document.getElementById('create-lead-btn').disabled = true;
+  document.getElementById('create-lead-btn').textContent = 'Adding...';
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'createLead',
+      leadName: name,
+      owner: owner,
+      source: source
+    }),
+    mode: 'no-cors'
+  })
+  .then(function() {
+    allLeads.push(name);
+    allLeads.sort();
+    selectLead(name);
+    document.getElementById('new-lead-name').value = '';
+    document.getElementById('new-lead-form').classList.remove('visible');
+    document.getElementById('create-lead-btn').disabled = false;
+    document.getElementById('create-lead-btn').textContent = 'Add lead';
+  })
+  .catch(function(err) {
+    errEl.textContent = 'Failed to add lead';
+    document.getElementById('create-lead-btn').disabled = false;
+    document.getElementById('create-lead-btn').textContent = 'Add lead';
+  });
+}
+
+// ============================================================
+// Owner dropdowns
+// ============================================================
+function renderOwnerDropdowns() {
+  ['next-action-owner', 'new-lead-owner'].forEach(function(id) {
+    var select = document.getElementById(id);
+    select.innerHTML = '';
+    allOwners.forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  });
+  if (currentSubmitter) {
+    document.getElementById('next-action-owner').value = currentSubmitter;
+    document.getElementById('new-lead-owner').value = currentSubmitter;
+  }
+}
+
+// ============================================================
+// Submit signal
+// ============================================================
+function submitSignal() {
+  var errorEl = document.getElementById('form-error');
+  errorEl.textContent = '';
+
+  if (!selectedLead) { errorEl.textContent = 'Select a lead'; return; }
+  var whatHappened = document.getElementById('what-happened').value.trim();
+  if (!whatHappened) { errorEl.textContent = 'Describe what happened'; return; }
+  var nextAction = document.getElementById('next-action').value.trim();
+  if (!nextAction) { errorEl.textContent = 'Enter the next action'; return; }
+  var nextDate = document.getElementById('next-action-date').value;
+  if (!nextDate) { errorEl.textContent = 'Set the date'; return; }
+  var nextOwner = document.getElementById('next-action-owner').value;
+
+  document.getElementById('form-loading').classList.add('visible');
+  document.getElementById('submit-btn').disabled = true;
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'logSignal',
+      leadName: selectedLead,
+      whatHappened: whatHappened,
+      nextAction: nextAction,
+      nextActionDate: nextDate,
+      nextActionOwner: nextOwner,
+      submitter: currentSubmitter
+    }),
+    mode: 'no-cors'
+  })
+  .then(function() {
+    document.getElementById('form-loading').classList.remove('visible');
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('confirm-detail').innerHTML =
+      '<strong>' + selectedLead + '</strong><br>updated in Pipeline';
+    showScreen('screen-confirm');
+  })
+  .catch(function(err) {
+    document.getElementById('form-loading').classList.remove('visible');
+    document.getElementById('submit-btn').disabled = false;
+    errorEl.textContent = 'Failed to save. Try again.';
+  });
+}
+
+// ============================================================
+// Post-submit
+// ============================================================
+function logAnother() {
+  selectedLead = null;
+  document.getElementById('lead-search').value = '';
+  document.getElementById('lead-search').style.display = '';
+  document.getElementById('selected-lead').classList.remove('visible');
+  document.querySelector('.add-lead-trigger').style.display = '';
+  document.getElementById('what-happened').value = '';
+  document.getElementById('next-action').value = '';
+  document.getElementById('next-action-date').value = '';
+  document.getElementById('form-error').textContent = '';
+  if (currentSubmitter) document.getElementById('next-action-owner').value = currentSubmitter;
+  showScreen('screen-form');
+}
+
+// ============================================================
+// Init
+// ============================================================
+(function init() {
+  if (localStorage.getItem('aldea_auth') === 'true') {
+    fetchData();
+    var saved = localStorage.getItem('aldea_submitter');
+    if (saved) {
+      currentSubmitter = saved;
+      document.getElementById('submitter-display').textContent = saved;
+      showScreen('screen-form');
+    } else {
+      showScreen('screen-identity');
+    }
+  }
+})();
+</script>
+</body>
+</html>
