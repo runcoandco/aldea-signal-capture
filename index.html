@@ -523,11 +523,11 @@
       <p class="logo-fallback">aldea</p>
       <h1>Lead Tracker</h1>
     </div>
-    <div style="width: 100%; max-width: 280px;">
+    <form onsubmit="checkPassword(event)" style="width: 100%; max-width: 280px;">
       <input type="password" id="password-input" placeholder="Password" style="text-align: center;" autocomplete="off">
       <div class="error-msg" id="gate-error"></div>
-    </div>
-    <button class="btn btn-primary" style="max-width: 280px;" onclick="checkPassword()">Enter</button>
+      <button class="btn btn-primary" type="submit">Enter</button>
+    </form>
   </div>
 </div>
 
@@ -549,7 +549,7 @@
   </div>
 
   <div class="card">
-    <div class="section-title">Overdue actions</div>
+    <div class="section-title" id="home-actions-title">Overdue actions</div>
     <div class="overdue-list" id="overdue-list">
       <div class="empty-state"><span class="spinner"></span> Loading actions...</div>
     </div>
@@ -699,6 +699,7 @@ var PASSWORD = 'aldea2026';
 var allLeads = [];
 var allOwners = [];
 var allOverdueActions = [];
+var allComingActions = [];
 var allSources = ['Inner Community','Founder Network','Event / Experience','Partner Lead','Referral','Inbound','Other'];
 var selectedLead = null;
 var currentSubmitter = null;
@@ -733,7 +734,8 @@ function goHome() {
 // ============================================================
 // Screen 1: Password
 // ============================================================
-function checkPassword() {
+function checkPassword(event) {
+  if (event) event.preventDefault();
   var input = document.getElementById('password-input').value;
   if (input === PASSWORD) {
     localStorage.setItem('aldea_auth', 'true');
@@ -752,7 +754,7 @@ function checkPassword() {
   }
 }
 document.getElementById('password-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') checkPassword();
+  if (e.key === 'Enter') checkPassword(e);
 });
 
 // ============================================================
@@ -767,6 +769,7 @@ function fetchData() {
         allLeads = data.leads || [];
         allOwners = data.owners || [];
         allOverdueActions = data.overdueActions || [];
+        allComingActions = data.comingActions || [];
         dataLoaded = true;
         renderIdentityButtons();
         renderOwnerDropdowns();
@@ -953,8 +956,10 @@ function renderOwnerDropdowns() {
 
 function renderOverdueActions() {
   var container = document.getElementById('overdue-list');
+  var title = document.getElementById('home-actions-title');
   if (!container) return;
   container.innerHTML = '';
+  if (title) title.textContent = 'Overdue actions';
 
   if (!dataLoaded) {
     container.innerHTML = '<div class="empty-state"><span class="spinner"></span> Loading actions...</div>';
@@ -964,10 +969,18 @@ function renderOverdueActions() {
   var ownerActions = allOverdueActions.filter(function(item) {
     return ownerMatchesCurrentUser(item.owner) || ownerMatchesCurrentUser(item.nextActionOwner);
   });
+  var isComingList = false;
 
   if (!ownerActions.length) {
-    container.innerHTML = '<div class="empty-state">No overdue actions.</div>';
-    return;
+    ownerActions = allComingActions.filter(function(item) {
+      return ownerMatchesCurrentUser(item.owner) || ownerMatchesCurrentUser(item.nextActionOwner);
+    });
+    isComingList = true;
+    if (title) title.textContent = 'Upcoming actions';
+    if (!ownerActions.length) {
+      container.innerHTML = '<div class="empty-state">No overdue or upcoming actions.</div>';
+      return;
+    }
   }
 
   var table = document.createElement('div');
@@ -986,7 +999,7 @@ function renderOverdueActions() {
 
     var days = document.createElement('div');
     days.className = 'overdue-days';
-    days.textContent = (item.daysOverdue || 0) + 'd overdue';
+    days.textContent = formatActionTiming(item, isComingList);
 
     var stage = document.createElement('div');
     stage.className = 'overdue-stage';
@@ -1008,6 +1021,18 @@ function renderOverdueActions() {
     table.appendChild(row);
   });
   container.appendChild(table);
+}
+
+function formatActionTiming(item, isComingList) {
+  if (!isComingList) {
+    return (item.daysOverdue || 0) + 'd overdue';
+  }
+
+  if (item.daysUntilDue === 0) {
+    return 'due today';
+  }
+
+  return 'in ' + item.daysUntilDue + 'd';
 }
 
 function ownerMatchesCurrentUser(name) {
