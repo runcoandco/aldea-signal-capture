@@ -742,9 +742,31 @@ function fetchData() {
         renderIdentityButtons();
         renderOwnerDropdowns();
         renderOverdueActions();
+      } else {
+        showLoadError(data.error || 'Could not load CRM data.');
       }
     })
-    .catch(function(err) { console.error('Fetch error:', err); });
+    .catch(function(err) {
+      console.error('Fetch error:', err);
+      showLoadError('Could not reach the CRM.');
+    });
+}
+
+function showLoadError(message) {
+  var identityList = document.getElementById('identity-list');
+  if (identityList) {
+    identityList.innerHTML =
+      '<p style="font-size: 14px; color: var(--error); text-align: center; padding: 24px;">' +
+      message +
+      '</p>';
+  }
+  var overdueList = document.getElementById('overdue-list');
+  if (overdueList) {
+    overdueList.innerHTML =
+      '<div class="empty-state" style="color: var(--error);">' +
+      message +
+      '</div>';
+  }
 }
 
 // ============================================================
