@@ -82,6 +82,17 @@
     margin-bottom: 18px;
   }
 
+  .logo-fallback {
+    display: none;
+    font-family: var(--font-head);
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent-warm);
+    margin-bottom: 8px;
+  }
+
   .inline-logo {
     width: 148px;
     height: auto;
@@ -251,12 +262,19 @@
   }
 
   .overdue-buyer {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    font-family: var(--font-body);
     font-size: 15px;
     font-weight: 500;
     color: var(--error);
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    cursor: pointer;
   }
+
+  .overdue-buyer:active { color: var(--accent-hover); }
 
   .overdue-days {
     font-size: 13px;
@@ -494,7 +512,8 @@
 <div class="screen active" id="screen-gate">
   <div class="gate-center">
     <div class="screen-header">
-      <img class="splash-logo" src="assets/aldea-square.png" alt="ALDEA">
+      <img class="splash-logo" src="./assets/aldea-square.png" alt="ALDEA" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+      <p class="logo-fallback">aldea</p>
       <h1>Lead Tracker</h1>
     </div>
     <div style="width: 100%; max-width: 280px;">
@@ -509,7 +528,8 @@
 <div class="screen" id="screen-home">
   <div class="app-header">
     <div>
-      <img class="inline-logo" src="assets/aldea-inline.png" alt="ALDEA Comporta">
+      <img class="inline-logo" src="./assets/aldea-inline.png" alt="ALDEA Comporta" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+      <p class="logo-fallback">aldea</p>
       <h1 style="font-size: 18px;">Lead Tracker</h1>
     </div>
     <div class="header-actions">
@@ -532,7 +552,8 @@
 <!-- ===== SCREEN 2: IDENTITY ===== -->
 <div class="screen" id="screen-identity">
   <div class="screen-header">
-    <img class="inline-logo" src="assets/aldea-inline.png" alt="ALDEA Comporta" style="margin: 0 auto 8px;">
+    <img class="inline-logo" src="./assets/aldea-inline.png" alt="ALDEA Comporta" style="margin: 0 auto 8px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+    <p class="logo-fallback">aldea</p>
     <h1>Who is logging?</h1>
   </div>
   <div class="card">
@@ -551,7 +572,8 @@
 <div class="screen" id="screen-form">
   <div class="app-header">
     <div>
-      <img class="inline-logo" src="assets/aldea-inline.png" alt="ALDEA Comporta">
+      <img class="inline-logo" src="./assets/aldea-inline.png" alt="ALDEA Comporta" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+      <p class="logo-fallback">aldea</p>
       <h1 style="font-size: 18px;">Lead Tracker</h1>
     </div>
     <div class="header-actions">
@@ -825,6 +847,15 @@ function selectLead(name) {
   document.querySelector('.add-lead-trigger').style.display = 'none';
   document.getElementById('new-lead-form').classList.remove('visible');
 }
+
+function logOverdueLead(name) {
+  resetForm();
+  selectLead(name);
+  showScreen('screen-form');
+  setTimeout(function() {
+    document.getElementById('what-happened').focus();
+  }, 0);
+}
 function clearLead() {
   selectedLead = null;
   document.getElementById('lead-search').value = '';
@@ -934,9 +965,12 @@ function renderOverdueActions() {
     var row = document.createElement('div');
     row.className = 'overdue-row';
 
-    var buyer = document.createElement('div');
+    var buyer = document.createElement('button');
+    buyer.type = 'button';
     buyer.className = 'overdue-buyer';
-    buyer.textContent = item.buyerName || item.leadName || 'Unnamed buyer';
+    var buyerName = item.buyerName || item.leadName || 'Unnamed buyer';
+    buyer.textContent = buyerName;
+    buyer.onclick = function() { logOverdueLead(buyerName); };
 
     var days = document.createElement('div');
     days.className = 'overdue-days';
