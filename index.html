@@ -206,6 +206,7 @@
     cursor: pointer;
     transition: background 0.2s, transform 0.1s;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .btn:active { transform: scale(0.98); }
   .btn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -526,7 +527,7 @@
     <form onsubmit="checkPassword(event)" style="width: 100%; max-width: 280px;">
       <input type="password" id="password-input" placeholder="Password" style="text-align: center;" autocomplete="off">
       <div class="error-msg" id="gate-error"></div>
-      <button class="btn btn-primary" type="submit">Enter</button>
+      <button class="btn btn-primary" id="gate-enter-btn" type="button" onclick="checkPassword(event)">Enter</button>
     </form>
   </div>
 </div>
@@ -756,6 +757,10 @@ function checkPassword(event) {
 document.getElementById('password-input').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') checkPassword(e);
 });
+document.getElementById('gate-enter-btn').addEventListener('touchend', function(e) {
+  e.preventDefault();
+  checkPassword(e);
+}, { passive: false });
 
 // ============================================================
 // Data fetch
