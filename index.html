@@ -238,6 +238,10 @@
     margin-bottom: 18px;
   }
 
+  .home-footer {
+    margin: 18px 0 4px;
+  }
+
   .section-title {
     font-family: var(--font-head);
     font-size: 13px;
@@ -525,7 +529,7 @@
       <h1>Lead Tracker</h1>
     </div>
     <form onsubmit="checkPassword(event)" style="width: 100%; max-width: 280px;">
-      <input type="password" id="password-input" placeholder="Password" style="text-align: center;" autocomplete="off">
+      <input type="password" id="password-input" placeholder="Password" style="text-align: center;" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
       <div class="error-msg" id="gate-error"></div>
       <button class="btn btn-primary" id="gate-enter-btn" type="button" onclick="checkPassword(event)">Enter</button>
     </form>
@@ -554,6 +558,10 @@
     <div class="overdue-list" id="overdue-list">
       <div class="empty-state"><span class="spinner"></span> Loading actions...</div>
     </div>
+  </div>
+
+  <div class="home-footer">
+    <button class="btn btn-secondary" onclick="logout()">Log out</button>
   </div>
 </div>
 
@@ -732,13 +740,24 @@ function goHome() {
   showScreen('screen-home');
 }
 
+function logout() {
+  localStorage.removeItem('aldea_auth');
+  localStorage.removeItem('aldea_submitter');
+  currentSubmitter = null;
+  updateSubmitterDisplays();
+  resetForm();
+  document.getElementById('password-input').value = '';
+  document.getElementById('gate-error').textContent = '';
+  showScreen('screen-gate');
+}
+
 // ============================================================
 // Screen 1: Password
 // ============================================================
 function checkPassword(event) {
   if (event) event.preventDefault();
-  var input = document.getElementById('password-input').value;
-  if (input === PASSWORD) {
+  var input = document.getElementById('password-input').value.trim().toLowerCase();
+  if (input === PASSWORD.toLowerCase()) {
     localStorage.setItem('aldea_auth', 'true');
     document.getElementById('gate-error').textContent = '';
     fetchData();
