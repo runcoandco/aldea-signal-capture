@@ -1075,7 +1075,7 @@ function formatActionTiming(item, isComingList) {
 function formatStagePriority(item) {
   var stage = item.stage || '';
   var priority = item.priority || '';
-  if (stage && priority) return stage + ' | ' + priority;
+  if (stage && priority) return stage + '   |   ' + priority;
   return stage || priority;
 }
 
