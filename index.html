@@ -551,6 +551,7 @@
 
   <div class="home-actions">
     <button class="btn btn-primary" onclick="startLog()">Log signal</button>
+    <button class="btn btn-secondary" onclick="refreshData()">Refresh CRM</button>
   </div>
 
   <div class="card">
@@ -730,14 +731,19 @@ function updateSubmitterDisplays() {
 }
 
 function startLog() {
+  fetchData(true);
   resetForm();
   showScreen('screen-form');
 }
 
 function goHome() {
   resetForm();
-  renderOverdueActions();
+  fetchData(true);
   showScreen('screen-home');
+}
+
+function refreshData() {
+  fetchData(true);
 }
 
 function logout() {
@@ -760,13 +766,14 @@ function checkPassword(event) {
   if (input === PASSWORD.toLowerCase()) {
     localStorage.setItem('aldea_auth', 'true');
     document.getElementById('gate-error').textContent = '';
-    fetchData();
     var saved = localStorage.getItem('aldea_submitter');
     if (saved) {
       currentSubmitter = saved;
       updateSubmitterDisplays();
+      fetchData(true);
       showScreen('screen-home');
     } else {
+      fetchData(true);
       showScreen('screen-identity');
     }
   } else {
@@ -784,9 +791,10 @@ document.getElementById('gate-enter-btn').addEventListener('touchend', function(
 // ============================================================
 // Data fetch
 // ============================================================
-function fetchData() {
-  if (dataLoaded) return;
-  fetch(SCRIPT_URL)
+function fetchData(force) {
+  if (dataLoaded && !force) return;
+  var url = SCRIPT_URL + (SCRIPT_URL.indexOf('?') === -1 ? '?' : '&') + 'fresh=' + Date.now();
+  fetch(url, { cache: 'no-store' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success) {
@@ -1149,13 +1157,14 @@ function logAnother() {
 // ============================================================
 (function init() {
   if (localStorage.getItem('aldea_auth') === 'true') {
-    fetchData();
     var saved = localStorage.getItem('aldea_submitter');
     if (saved) {
       currentSubmitter = saved;
       updateSubmitterDisplays();
+      fetchData(true);
       showScreen('screen-home');
     } else {
+      fetchData(true);
       showScreen('screen-identity');
     }
   }
