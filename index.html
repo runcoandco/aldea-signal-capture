@@ -305,6 +305,7 @@
   .overdue-stage {
     color: var(--text-mid);
     font-weight: 500;
+    white-space: nowrap;
   }
 
   .overdue-action {
@@ -1020,6 +1021,8 @@ function renderOverdueActions() {
     }
   }
 
+  ownerActions.sort(compareHomeActions);
+
   var table = document.createElement('div');
   table.className = 'overdue-table';
 
@@ -1075,8 +1078,34 @@ function formatActionTiming(item, isComingList) {
 function formatStagePriority(item) {
   var stage = item.stage || '';
   var priority = item.priority || '';
-  if (stage && priority) return stage + '   |   ' + priority;
+  if (stage && priority) return stage + '\u00a0\u00a0\u00a0\u00a0|\u00a0\u00a0\u00a0\u00a0' + priority;
   return stage || priority;
+}
+
+function compareHomeActions(a, b) {
+  var priorityA = prioritySortValue(a.priority);
+  var priorityB = prioritySortValue(b.priority);
+  if (priorityA !== priorityB) return priorityA.localeCompare(priorityB);
+
+  var stageA = stageSortValue(a.stage);
+  var stageB = stageSortValue(b.stage);
+  if (stageA !== stageB) return stageB.localeCompare(stageA);
+
+  var overdueA = Number(a.daysOverdue || 0);
+  var overdueB = Number(b.daysOverdue || 0);
+  if (overdueA !== overdueB) return overdueB - overdueA;
+
+  var dueA = String(a.dueDate || a.nextActionDate || '').trim();
+  var dueB = String(b.dueDate || b.nextActionDate || '').trim();
+  return dueA.localeCompare(dueB);
+}
+
+function prioritySortValue(value) {
+  return String(value || 'zzzz').trim().toLowerCase();
+}
+
+function stageSortValue(value) {
+  return String(value || '').trim().toLowerCase();
 }
 
 function ownerMatchesCurrentUser(name) {
