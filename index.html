@@ -948,6 +948,10 @@ function goToTaskManager() {
   window.location.href = SHELL_URL + '/task-manager';
 }
 
+function launchFromWorkspace() {
+  window.location.replace(SHELL_URL + '/api/signal/launch');
+}
+
 function refreshData() {
   fetchData(true);
 }
@@ -1397,7 +1401,7 @@ function logAnother() {
   var launchedOwner = params.get('owner');
   currentRole = params.get('role') === 'admin' ? 'admin' : 'user';
   if (!launchedOwner) {
-    goToWorkspace();
+    launchFromWorkspace();
     return;
   }
   var saved = launchedOwner || (currentRole === 'admin' ? localStorage.getItem('aldea_submitter') : null);
