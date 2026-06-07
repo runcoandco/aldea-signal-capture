@@ -25,6 +25,8 @@
     --sage-light: #EAEBE2;
     --success: #5A7A52;
     --success-bg: #E8EDE6;
+    --warning: #A96E22;
+    --warning-bg: #F7EFE1;
     --error: #A0453A;
     --error-bg: #F5E6E4;
     --radius: 8px;
@@ -691,8 +693,23 @@
     }
 
     .header-actions {
-      align-items: flex-end;
-      flex-direction: column;
+      align-items: stretch;
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(2, minmax(34px, 1fr));
+      justify-content: end;
+      margin-left: auto;
+      max-width: 240px;
+    }
+
+    .header-actions .icon-btn,
+    .header-actions .submitter-chip {
+      width: 100%;
+    }
+
+    .header-actions .submitter-chip {
+      grid-column: 1 / -1;
+      justify-self: stretch;
     }
 
     .field-row,
