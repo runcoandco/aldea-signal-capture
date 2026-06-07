@@ -907,6 +907,7 @@ var allComingActions = [];
 var allSources = ['Inner Community','Founder Network','Event / Experience','Partner Lead','Referral','Inbound','Other'];
 var selectedLead = null;
 var currentSubmitter = null;
+var currentRole = 'user';
 var dataLoaded = false;
 
 // ============================================================
@@ -920,7 +921,10 @@ function showScreen(id) {
 function updateSubmitterDisplays() {
   ['submitter-display', 'home-submitter-display'].forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) el.textContent = currentSubmitter || '';
+    if (!el) return;
+    el.textContent = currentSubmitter || '';
+    el.disabled = currentRole !== 'admin';
+    el.title = currentRole === 'admin' ? 'Switch Signal user' : 'Signed-in Signal user';
   });
 }
 
@@ -1044,6 +1048,7 @@ function renderIdentityButtons() {
   });
 }
 function selectIdentity(name) {
+  if (currentRole !== 'admin') return;
   currentSubmitter = name;
   localStorage.setItem('aldea_submitter', name);
   updateSubmitterDisplays();
@@ -1051,6 +1056,7 @@ function selectIdentity(name) {
   showScreen('screen-home');
 }
 function changeIdentity() {
+  if (currentRole !== 'admin') return;
   if (dataLoaded) renderIdentityButtons();
   showScreen('screen-identity');
 }
@@ -1387,9 +1393,18 @@ function logAnother() {
 // Init
 // ============================================================
 (function init() {
-  var saved = localStorage.getItem('aldea_submitter');
+  var params = new URLSearchParams(window.location.search);
+  var launchedOwner = params.get('owner');
+  currentRole = params.get('role') === 'admin' ? 'admin' : 'user';
+  if (!launchedOwner) {
+    goToWorkspace();
+    return;
+  }
+  var saved = launchedOwner || (currentRole === 'admin' ? localStorage.getItem('aldea_submitter') : null);
   if (saved) {
     currentSubmitter = saved;
+    localStorage.setItem('aldea_submitter', saved);
+    history.replaceState({}, document.title, window.location.pathname);
     updateSubmitterDisplays();
     fetchData(true);
     showScreen('screen-home');
