@@ -736,7 +736,13 @@
       <button class="icon-btn" onclick="goToWorkspace()" aria-label="Workspace Home" title="Workspace Home">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       </button>
+      <button class="icon-btn" onclick="goToTaskManager()" aria-label="Open Task Manager" title="Open Task Manager">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m4 6 1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>
+      </button>
       <button class="submitter-chip" id="home-submitter-display" onclick="changeIdentity()"></button>
+      <button class="icon-btn" onclick="logout()" aria-label="Sign Out" title="Sign Out">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg>
+      </button>
     </div>
   </div>
 
@@ -751,10 +757,6 @@
     </div>
   </div>
 
-  <div class="home-footer">
-    <button class="btn btn-secondary" onclick="goToTaskManager()">Task Manager</button>
-    <button class="btn btn-secondary" onclick="logout()">Log out</button>
-  </div>
 </div>
 
 <!-- ===== SCREEN 2: IDENTITY ===== -->
@@ -791,7 +793,13 @@
       <button class="icon-btn" onclick="goToWorkspace()" aria-label="Workspace Home" title="Workspace Home">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       </button>
+      <button class="icon-btn" onclick="goToTaskManager()" aria-label="Open Task Manager" title="Open Task Manager">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m4 6 1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>
+      </button>
       <button class="submitter-chip" id="submitter-display" onclick="changeIdentity()"></button>
+      <button class="icon-btn" onclick="logout()" aria-label="Sign Out" title="Sign Out">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg>
+      </button>
     </div>
   </div>
 
@@ -1004,6 +1012,9 @@ function fetchData(force) {
       if (data.success) {
         allLeads = data.leads || [];
         allOwners = data.owners || [];
+        currentSubmitter = resolveSignalOwner(currentSubmitter);
+        localStorage.setItem('aldea_submitter', currentSubmitter);
+        updateSubmitterDisplays();
         allOverdueActions = data.overdueActions || [];
         allComingActions = data.comingActions || [];
         dataLoaded = true;
@@ -1319,6 +1330,21 @@ function normalizeOwnerName(name) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
+}
+
+function resolveSignalOwner(name) {
+  if (!name || !allOwners.length) return name;
+  var normalized = normalizeOwnerName(name);
+  var exact = allOwners.find(function(owner) {
+    return normalizeOwnerName(owner) === normalized;
+  });
+  if (exact) return exact;
+
+  var firstName = normalized.split(/\s+/)[0];
+  var matches = allOwners.filter(function(owner) {
+    return normalizeOwnerName(owner).split(/\s+/)[0] === firstName;
+  });
+  return matches.length === 1 ? matches[0] : name;
 }
 
 // ============================================================
