@@ -270,11 +270,12 @@
     width: 100%;
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
-    background: var(--surface);
+    background: var(--accent-light);
     padding: 16px 14px;
     text-align: left;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    min-height: 132px;
   }
 
   .home-card:active {
@@ -558,6 +559,25 @@
     overflow-x: auto;
   }
 
+  .inventory-context {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .inventory-context-copy {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text-mid);
+  }
+
+  .inventory-context-copy strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
   .inventory-table {
     min-width: 860px;
   }
@@ -588,6 +608,14 @@
     border-bottom: 0.5px solid var(--border);
   }
 
+  .inventory-table-row.assignable {
+    cursor: pointer;
+  }
+
+  .inventory-table-row.assignable:active {
+    background: rgba(41, 69, 134, 0.04);
+  }
+
   .inventory-table-row:last-child {
     border-bottom: 0;
   }
@@ -604,6 +632,57 @@
 
   .detail-search {
     margin-bottom: 16px;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 12px;
+    margin-bottom: 18px;
+  }
+
+  .detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .detail-field.full {
+    grid-column: 1 / -1;
+  }
+
+  .detail-unit-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px 14px;
+    border: 0.5px solid rgba(164, 137, 114, 0.2);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .detail-unit-copy {
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  .detail-actions {
+    display: flex;
+    gap: 10px;
+    margin: 4px 0 18px;
+  }
+
+  .detail-actions .btn {
+    width: auto;
+    flex: 1;
+  }
+
+  .helper-copy {
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.45;
+    margin-top: 6px;
   }
 
   /* Confirmation */
@@ -879,6 +958,10 @@
       grid-template-columns: 1fr;
     }
 
+    .detail-grid {
+      grid-template-columns: 1fr;
+    }
+
     .home-cards {
       grid-template-columns: 1fr;
     }
@@ -1061,9 +1144,14 @@
 
     <div class="field-group">
       <label>Unit assignment</label>
-      <select id="unit-selected">
-        <option value="">No unit selected</option>
-      </select>
+      <div class="detail-unit-box">
+        <div class="detail-unit-copy" id="form-unit-selected">No unit selected</div>
+        <button class="btn btn-secondary" type="button" style="width:auto; min-height:auto; padding:10px 12px;" onclick="chooseUnitForForm()">Choose Unit</button>
+      </div>
+      <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+        <button class="btn btn-secondary" type="button" style="width:auto; min-height:auto; padding:8px 10px;" onclick="clearAssignedUnit('form')">Clear</button>
+      </div>
+      <p class="helper-copy">Pick the unit from Inventory so assignments stay controlled and visible.</p>
     </div>
 
     <div class="field-group">
@@ -1118,6 +1206,10 @@
 
   <div class="card" id="inventory-card">
     <div class="section-title">Inventory</div>
+    <div class="inventory-context" id="inventory-context" style="display:none;">
+      <div class="inventory-context-copy" id="inventory-context-copy"></div>
+      <button class="btn btn-secondary" type="button" style="width:auto; min-height:auto; padding:10px 12px;" onclick="cancelInventorySelection()">Back</button>
+    </div>
     <div class="inventory-grid">
       <div class="inventory-table" id="inventory-list">
         <div class="empty-state"><span class="spinner"></span> Loading inventory...</div>
@@ -1160,27 +1252,40 @@
   </div>
 
   <div class="card">
-    <div class="field-group">
-      <label>Lead Stage</label>
-      <div id="detail-stage" style="font-size: 16px; color: var(--text); padding-top: 2px;">Select a lead to view details.</div>
-    </div>
-    <div class="field-group">
-      <label>Assigned Unit</label>
-      <div id="detail-unit" style="font-size: 16px; color: var(--text); padding-top: 2px;">-</div>
-    </div>
-    <div class="field-row" style="margin-bottom: 18px;">
-      <div>
+    <div class="detail-grid">
+      <div class="detail-field">
+        <label>Lead Stage</label>
+        <select id="detail-stage"></select>
+      </div>
+      <div class="detail-field">
+        <label>Assigned Unit</label>
+        <div class="detail-unit-box">
+          <div class="detail-unit-copy" id="detail-unit">Select a lead to view details.</div>
+          <button class="btn btn-secondary" type="button" style="width:auto; min-height:auto; padding:10px 12px;" onclick="chooseUnitForDetail()">Assign Unit</button>
+        </div>
+      </div>
+      <div class="detail-field">
         <label>Next Action</label>
-        <div id="detail-next-action" style="font-size: 16px; color: var(--text); padding-top: 2px;">-</div>
+        <input type="text" id="detail-next-action" placeholder="Next action">
       </div>
-      <div>
+      <div class="detail-field">
         <label>Next Action Date</label>
-        <div id="detail-next-action-date" style="font-size: 16px; color: var(--text); padding-top: 2px;">-</div>
+        <input type="date" id="detail-next-action-date">
       </div>
-    </div>
-    <div class="field-group">
-      <label>Last Contact</label>
-      <div id="detail-last-contact" style="font-size: 16px; color: var(--text); padding-top: 2px;">-</div>
+      <div class="detail-field">
+        <label>Next Action Owner</label>
+        <select id="detail-next-action-owner"></select>
+      </div>
+      <div class="detail-field">
+        <label>Last Contact</label>
+        <div id="detail-last-contact" style="font-size: 16px; color: var(--text); padding-top: 12px;">-</div>
+      </div>
+      <div class="detail-field full">
+        <div class="detail-actions">
+          <button class="btn btn-primary" type="button" onclick="saveLeadDetail()">Save Lead Detail</button>
+          <button class="btn btn-secondary" type="button" onclick="openLogSignalFromDetail()">Log Signal</button>
+        </div>
+      </div>
     </div>
     <div class="field-group">
       <label>Contact Log</label>
@@ -1226,6 +1331,7 @@ var allSources = ['Inner Community','Founder Network','Event / Experience','Part
 var selectedLead = null;
 var selectedUnit = '';
 var selectedDetailLead = null;
+var assignmentContext = null;
 var currentSubmitter = null;
 var currentRole = 'user';
 var dataLoaded = false;
@@ -1253,7 +1359,7 @@ function startLog() {
   resetForm();
   selectedDetailLead = selectedLead || selectedDetailLead;
   showScreen('screen-form');
-  renderLogUnitOptions();
+  updateUnitSelectionDisplays();
 }
 
 function openLogSignal() {
@@ -1262,6 +1368,7 @@ function openLogSignal() {
 
 function openInventory() {
   fetchData(true);
+  assignmentContext = null;
   renderInventory();
   showScreen('screen-inventory');
 }
@@ -1354,7 +1461,7 @@ function fetchData(force) {
         dataLoaded = true;
         renderIdentityButtons();
         renderOwnerDropdowns();
-        renderLogUnitOptions();
+        updateUnitSelectionDisplays();
         renderHomeSummary();
         renderOverdueActions();
         renderInventory();
@@ -1479,6 +1586,8 @@ function showDetailResults() {
 
 function selectDetailLead(name) {
   selectedDetailLead = name;
+  var row = findLeadRow(name);
+  selectedUnit = row && row.unitSelected ? row.unitSelected : '';
   var search = document.getElementById('detail-lead-search');
   var results = document.getElementById('detail-search-results');
   if (search) search.value = name;
@@ -1496,7 +1605,7 @@ function selectLead(name) {
   document.getElementById('selected-lead').classList.add('visible');
   document.querySelector('.add-lead-trigger').style.display = 'none';
   document.getElementById('new-lead-form').classList.remove('visible');
-  renderLogUnitOptions();
+  updateUnitSelectionDisplays();
 }
 
 function logOverdueLead(name) {
@@ -1516,6 +1625,7 @@ function clearLead() {
   document.getElementById('selected-lead').classList.remove('visible');
   document.querySelector('.add-lead-trigger').style.display = '';
   document.getElementById('lead-search').focus();
+  updateUnitSelectionDisplays();
 }
 
 document.addEventListener('click', function(e) {
@@ -1588,8 +1698,9 @@ function createNewLead() {
 // Owner dropdowns
 // ============================================================
 function renderOwnerDropdowns() {
-  ['next-action-owner', 'new-lead-owner'].forEach(function(id) {
+  ['next-action-owner', 'new-lead-owner', 'detail-next-action-owner'].forEach(function(id) {
     var select = document.getElementById(id);
+    if (!select) return;
     select.innerHTML = '';
     allOwners.forEach(function(name) {
       var opt = document.createElement('option');
@@ -1599,31 +1710,11 @@ function renderOwnerDropdowns() {
     });
   });
   if (currentSubmitter) {
-    document.getElementById('next-action-owner').value = currentSubmitter;
-    document.getElementById('new-lead-owner').value = currentSubmitter;
+    ['next-action-owner', 'new-lead-owner', 'detail-next-action-owner'].forEach(function(id) {
+      var select = document.getElementById(id);
+      if (select) select.value = currentSubmitter;
+    });
   }
-}
-
-function renderLogUnitOptions() {
-  var select = document.getElementById('unit-selected');
-  if (!select) return;
-  var currentValue = selectedUnit || select.value || '';
-  select.innerHTML = '<option value="">No unit selected</option>';
-  allUnits
-    .filter(function(unit) {
-      var status = String(unit.status || '').trim().toLowerCase();
-      return status === 'available' || unit.unitId === currentValue;
-    })
-    .sort(function(a, b) {
-      return String(a.unitId || '').localeCompare(String(b.unitId || ''));
-    })
-    .forEach(function(unit) {
-    var opt = document.createElement('option');
-    opt.value = unit.unitId;
-    opt.textContent = unit.unitId;
-    select.appendChild(opt);
-  });
-  select.value = currentValue;
 }
 
 function findLeadRow(name) {
@@ -1636,10 +1727,104 @@ function findLeadRow(name) {
   return null;
 }
 
+function updateUnitSelectionDisplays() {
+  var formUnit = document.getElementById('form-unit-selected');
+  var detailUnit = document.getElementById('detail-unit');
+  var current = selectedUnit || 'No unit selected';
+  if (formUnit) formUnit.textContent = current;
+  if (detailUnit) detailUnit.textContent = current;
+}
+
+function chooseUnitForForm() {
+  assignmentContext = 'form';
+  fetchData(true);
+  renderInventory();
+  showScreen('screen-inventory');
+}
+
+function chooseUnitForDetail() {
+  if (!selectedDetailLead) return;
+  assignmentContext = 'detail';
+  fetchData(true);
+  renderInventory();
+  showScreen('screen-inventory');
+}
+
+function clearAssignedUnit(context) {
+  selectedUnit = '';
+  updateUnitSelectionDisplays();
+  if (context === 'detail') {
+    renderLeadDetail();
+  }
+}
+
+function cancelInventorySelection() {
+  var destination = assignmentContext === 'detail' ? 'screen-lead-detail' : 'screen-form';
+  assignmentContext = null;
+  showScreen(destination);
+}
+
+function assignUnitFromInventory(unitId) {
+  selectedUnit = unitId || '';
+  updateUnitSelectionDisplays();
+  var destination = assignmentContext === 'detail' ? 'screen-lead-detail' : 'screen-form';
+  assignmentContext = null;
+  if (destination === 'screen-lead-detail') {
+    renderLeadDetail();
+  }
+  showScreen(destination);
+}
+
+function isAssignableUnit(unit) {
+  var status = String(unit.status || '').trim().toLowerCase();
+  return status === 'available' || unit.unitId === selectedUnit;
+}
+
+function renderDetailStageOptions(selectedStage) {
+  var select = document.getElementById('detail-stage');
+  if (!select) return;
+  var stageMap = {};
+  allPipelineRows.forEach(function(row) {
+    if (row.stage) stageMap[row.stage] = true;
+  });
+  var stages = Object.keys(stageMap).sort();
+  if (!stages.length) {
+    stages = ['1 - Identified', '2 - Contacted', '3 - Engaged', '4 - Visit Scheduled', '5 - Qualifying', '6 - Reserved', '7 - Under Contract', '8 - Closed'];
+  }
+  select.innerHTML = '';
+  stages.forEach(function(stage) {
+    var opt = document.createElement('option');
+    opt.value = stage;
+    opt.textContent = stage;
+    select.appendChild(opt);
+  });
+  if (selectedStage && stages.indexOf(selectedStage) === -1) {
+    var extra = document.createElement('option');
+    extra.value = selectedStage;
+    extra.textContent = selectedStage;
+    select.appendChild(extra);
+  }
+  select.value = selectedStage || stages[0] || '';
+}
+
 function renderInventory() {
   var container = document.getElementById('inventory-list');
+  var context = document.getElementById('inventory-context');
+  var contextCopy = document.getElementById('inventory-context-copy');
   if (!container) return;
   container.innerHTML = '';
+  if (context && contextCopy) {
+    if (assignmentContext === 'form' && selectedLead) {
+      context.style.display = 'flex';
+      contextCopy.innerHTML = '<strong>Assigning for:</strong> ' + selectedLead;
+    } else if (assignmentContext === 'detail' && selectedDetailLead) {
+      context.style.display = 'flex';
+      contextCopy.innerHTML = '<strong>Assigning for:</strong> ' + selectedDetailLead;
+    } else {
+      context.style.display = 'none';
+      contextCopy.textContent = '';
+    }
+  }
 
   if (!dataLoaded) {
     container.innerHTML = '<div class="empty-state"><span class="spinner"></span> Loading inventory...</div>';
@@ -1667,12 +1852,13 @@ function renderInventory() {
     .forEach(function(unit) {
       var row = document.createElement('div');
       row.className = 'inventory-table-row';
-      row.onclick = function() {
-        selectedUnit = unit.unitId;
-        var unitSelect = document.getElementById('unit-selected');
-        if (unitSelect) unitSelect.value = unit.unitId;
-        if (selectedLead) showScreen('screen-form');
-      };
+      var assignable = !assignmentContext || isAssignableUnit(unit);
+      if (assignmentContext && assignable) {
+        row.className += ' assignable';
+        row.onclick = function() {
+          assignUnitFromInventory(unit.unitId);
+        };
+      }
 
       [
         unit.unitId || '-',
@@ -1685,7 +1871,11 @@ function renderInventory() {
       ].forEach(function(value, index) {
         var cell = document.createElement('div');
         cell.className = 'inventory-cell' + (index === 6 || index === 5 ? ' muted' : '');
-        cell.textContent = value;
+        if (assignmentContext && index === 5 && !assignable) {
+          cell.textContent = value + ' (locked)';
+        } else {
+          cell.textContent = value;
+        }
         row.appendChild(cell);
       });
 
@@ -1699,26 +1889,38 @@ function renderLeadDetail() {
   var unitEl = document.getElementById('detail-unit');
   var nextActionEl = document.getElementById('detail-next-action');
   var nextActionDateEl = document.getElementById('detail-next-action-date');
+  var nextActionOwnerEl = document.getElementById('detail-next-action-owner');
   var lastContactEl = document.getElementById('detail-last-contact');
   var contactLogEl = document.getElementById('contact-log-list');
   var detailSearchEl = document.getElementById('detail-lead-search');
-  if (!stageEl || !unitEl || !nextActionEl || !nextActionDateEl || !lastContactEl || !contactLogEl) return;
+  if (!stageEl || !unitEl || !nextActionEl || !nextActionDateEl || !nextActionOwnerEl || !lastContactEl || !contactLogEl) return;
   if (detailSearchEl && (selectedDetailLead || selectedLead)) detailSearchEl.value = selectedDetailLead || selectedLead;
 
   if (!row) {
-    stageEl.textContent = 'Select a lead to view details.';
-    unitEl.textContent = '-';
-    nextActionEl.textContent = '-';
-    nextActionDateEl.textContent = '-';
+    renderDetailStageOptions('');
+    stageEl.disabled = true;
+    nextActionEl.value = '';
+    nextActionEl.disabled = true;
+    nextActionDateEl.value = '';
+    nextActionDateEl.disabled = true;
+    nextActionOwnerEl.value = currentSubmitter || '';
+    nextActionOwnerEl.disabled = true;
+    unitEl.textContent = 'Select a lead to view details.';
     lastContactEl.textContent = '-';
     contactLogEl.innerHTML = '<div class="empty-state">No contact log yet.</div>';
     return;
   }
 
-  stageEl.textContent = row.stage || '-';
-  unitEl.textContent = row.unitSelected || '-';
-  nextActionEl.textContent = row.nextAction || '-';
-  nextActionDateEl.textContent = row.nextActionDate || '-';
+  if (!selectedUnit) selectedUnit = row.unitSelected || '';
+  renderDetailStageOptions(row.stage || '');
+  stageEl.disabled = false;
+  nextActionEl.disabled = false;
+  nextActionDateEl.disabled = false;
+  nextActionOwnerEl.disabled = false;
+  nextActionEl.value = row.nextAction || '';
+  nextActionDateEl.value = formatDateForInput(row.nextActionDate);
+  nextActionOwnerEl.value = row.nextActionOwner || currentSubmitter || '';
+  unitEl.textContent = selectedUnit || 'No unit selected';
   lastContactEl.textContent = row.lastContactSummary || row.lastContact || '-';
 
   var logItems = (row.contactLog || '').split(/\n+/).map(function(line) { return line.trim(); }).filter(Boolean);
@@ -1740,6 +1942,70 @@ function renderLeadDetail() {
     item.appendChild(title);
     item.appendChild(body);
     contactLogEl.appendChild(item);
+  });
+}
+
+function formatDateForInput(value) {
+  if (!value) return '';
+  var date = coerceDisplayDate(value);
+  if (!date) return '';
+  var year = date.getFullYear();
+  var month = String(date.getMonth() + 1).padStart(2, '0');
+  var day = String(date.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
+}
+
+function coerceDisplayDate(value) {
+  if (!value) return null;
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return value;
+  }
+  var text = String(value).trim();
+  var iso = text.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+  if (iso) return new Date(parseInt(iso[1], 10), parseInt(iso[2], 10) - 1, parseInt(iso[3], 10));
+  var dmy = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (dmy) {
+    var year = parseInt(dmy[3], 10);
+    if (year < 100) year += 2000;
+    return new Date(year, parseInt(dmy[2], 10) - 1, parseInt(dmy[1], 10));
+  }
+  return null;
+}
+
+function openLogSignalFromDetail() {
+  if (!selectedDetailLead) return;
+  resetForm();
+  selectLead(selectedDetailLead);
+  showScreen('screen-form');
+}
+
+function saveLeadDetail() {
+  if (!selectedDetailLead) return;
+
+  var payload = {
+    action: 'updateLeadDetails',
+    leadName: selectedDetailLead,
+    stage: document.getElementById('detail-stage').value,
+    nextAction: document.getElementById('detail-next-action').value.trim(),
+    nextActionDate: document.getElementById('detail-next-action-date').value,
+    nextActionOwner: document.getElementById('detail-next-action-owner').value,
+    unitSelected: selectedUnit || ''
+  };
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    mode: 'cors'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(result) {
+    if (!result.success) throw new Error(result.error || 'Could not save lead detail.');
+    dataLoaded = false;
+    fetchData(true);
+  })
+  .catch(function(err) {
+    alert(err.message || 'Could not save lead detail.');
   });
 }
 
@@ -1902,7 +2168,7 @@ function submitSignal() {
   var nextDate = document.getElementById('next-action-date').value;
   if (!nextDate) { errorEl.textContent = 'Set the date'; return; }
   var nextOwner = document.getElementById('next-action-owner').value;
-  var unitSelectedValue = document.getElementById('unit-selected').value;
+  var unitSelectedValue = selectedUnit || '';
 
   document.getElementById('form-loading').classList.add('visible');
   document.getElementById('submit-btn').disabled = true;
@@ -1951,12 +2217,12 @@ function resetForm() {
   document.getElementById('new-lead-name').value = '';
   document.getElementById('new-lead-error').textContent = '';
   document.getElementById('what-happened').value = '';
-  var unitSelectedEl = document.getElementById('unit-selected');
-  if (unitSelectedEl) unitSelectedEl.value = '';
   document.getElementById('next-action').value = '';
   document.getElementById('next-action-date').value = '';
   document.getElementById('form-error').textContent = '';
   if (currentSubmitter) document.getElementById('next-action-owner').value = currentSubmitter;
+  assignmentContext = null;
+  updateUnitSelectionDisplays();
 }
 
 function logAnother() {

@@ -27,6 +27,7 @@ var CONFIG = {
   COL_NEXT_ACTION_DATE: 20, // T: Next Action Date
   COL_NEXT_ACTION_OWNER: 21,// U: Next Action Owner
   COL_CONTACT_LOG: 22,     // V: Contact Log
+  COL_UNIT_SELECTED: 16,   // P: Unit Selected
 
   // Setup: Owners dropdown range
   OWNERS_START_ROW: 18,
@@ -374,6 +375,9 @@ function doPost(e) {
     if (data.action === 'createLead') {
       return handleCreateLead(data);
     }
+    if (data.action === 'updateLeadDetails') {
+      return handleUpdateLeadDetails(data);
+    }
 
     // Default action: logSignal
     // Validate required fields
@@ -461,9 +465,7 @@ function doPost(e) {
     // Col U: Next Action Owner (overwrite)
     pipeline.getRange(leadRow, CONFIG.COL_NEXT_ACTION_OWNER).setValue(data.nextActionOwner);
 
-    if (unitSelected) {
-      pipeline.getRange(leadRow, 16).setValue(unitSelected);
-    }
+    pipeline.getRange(leadRow, CONFIG.COL_UNIT_SELECTED).setValue(unitSelected);
 
     // Col Q: Last Contact date (update to now)
     pipeline.getRange(leadRow, 17).setValue(now);
@@ -675,4 +677,70 @@ function handleCreateLead(data) {
       }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function handleUpdateLeadDetails(data) {
+  try {
+    if (!data.leadName || String(data.leadName).trim() === '') {
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: false, error: 'Lead name is required' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var pipeline = ss.getSheetByName(CONFIG.PIPELINE_SHEET);
+    var lastRow = pipeline.getLastRow();
+    var leadRow = findLeadRowByName_(pipeline, String(data.leadName).trim(), lastRow);
+
+    if (leadRow === -1) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: false, error: 'Lead not found: ' + data.leadName }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (data.stage !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_STAGE).setValue(String(data.stage || '').trim());
+    }
+    if (data.nextAction !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_NEXT_ACTION).setValue(String(data.nextAction || '').trim());
+    }
+    if (data.nextActionOwner !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_NEXT_ACTION_OWNER).setValue(String(data.nextActionOwner || '').trim());
+    }
+    if (data.unitSelected !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_UNIT_SELECTED).setValue(String(data.unitSelected || '').trim());
+    }
+    if (data.nextActionDate !== undefined) {
+      var parsedDate = coerceDate_(data.nextActionDate);
+      if (parsedDate) {
+        pipeline.getRange(leadRow, CONFIG.COL_NEXT_ACTION_DATE).setValue(parsedDate);
+      } else {
+        pipeline.getRange(leadRow, CONFIG.COL_NEXT_ACTION_DATE).setValue('');
+      }
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: true, lead: String(data.leadName).trim() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: error.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function findLeadRowByName_(pipeline, leadName, lastRow) {
+  var nameRange = pipeline.getRange(
+    CONFIG.PIPELINE_DATA_START,
+    CONFIG.COL_LEAD_NAME,
+    lastRow - CONFIG.PIPELINE_DATA_START + 1,
+    1
+  ).getValues();
+
+  for (var i = 0; i < nameRange.length; i++) {
+    if (String(nameRange[i][0]).trim() === leadName) {
+      return i + CONFIG.PIPELINE_DATA_START;
+    }
+  }
+  return -1;
 }
