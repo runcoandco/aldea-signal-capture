@@ -29,6 +29,8 @@
     --warning-bg: #F7EFE1;
     --error: #A0453A;
     --error-bg: #F5E6E4;
+    --purple: #5B3F9E;
+    --purple-bg: rgba(91, 63, 158, 0.16);
     --radius: 8px;
     --radius-lg: 12px;
     --font-head: 'Instrument Serif', serif;
@@ -285,18 +287,19 @@
 
   .home-card-kicker {
     display: block;
-    font-size: 11px;
+    font-size: 10px;
+    line-height: 1.1;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-light);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   .home-card-title {
     display: block;
-    font-family: var(--font-body);
+    font-family: var(--font-accent);
     font-size: 18px;
-    font-weight: 500;
+    font-weight: 700;
     color: var(--accent);
     margin-bottom: 4px;
   }
@@ -559,6 +562,10 @@
     overflow-x: auto;
   }
 
+  #screen-inventory {
+    max-width: 1200px;
+  }
+
   .inventory-context {
     display: flex;
     align-items: center;
@@ -579,13 +586,13 @@
   }
 
   .inventory-table {
-    min-width: 860px;
+    min-width: 1120px;
   }
 
   .inventory-table-head,
   .inventory-table-row {
     display: grid;
-    grid-template-columns: 1.2fr 1fr 0.9fr 1.1fr 1.1fr 1fr 1.2fr;
+    grid-template-columns: 1.05fr 1fr 0.7fr 1.05fr 0.95fr 0.95fr 1.2fr;
     gap: 12px;
     align-items: start;
   }
@@ -628,6 +635,63 @@
 
   .inventory-cell.muted {
     color: var(--text-mid);
+  }
+
+  .inventory-cell.numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .inventory-lead-link {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: var(--accent);
+    cursor: pointer;
+    font: inherit;
+    line-height: inherit;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .inventory-lead-link:active {
+    color: var(--accent-hover);
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-family: var(--font-accent);
+    font-size: 12px;
+    line-height: 1;
+    padding: 7px 10px 6px;
+    white-space: nowrap;
+  }
+
+  .status-pill.status-available {
+    background: var(--success-bg);
+    color: #5a6044;
+  }
+
+  .status-pill.status-soft-hold,
+  .status-pill.status-reserved {
+    background: rgba(221, 210, 95, 0.32);
+    color: #7a6c16;
+  }
+
+  .status-pill.status-under-contract {
+    background: rgba(160, 69, 58, 0.13);
+    color: var(--error);
+  }
+
+  .status-pill.status-sold {
+    background: var(--purple-bg);
+    box-shadow: inset 0 0 0 0.5px rgba(91, 63, 158, 0.18);
+    color: var(--purple);
   }
 
   .detail-search {
@@ -1780,6 +1844,58 @@ function isAssignableUnit(unit) {
   return status === 'available' || unit.unitId === selectedUnit;
 }
 
+function statusClassName(status) {
+  var normalized = String(status || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized ? 'status-' + normalized : '';
+}
+
+function parseNumericValue(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return isNaN(value) ? null : value;
+  var normalized = String(value)
+    .replace(/\s/g, '')
+    .replace(/€/g, '')
+    .replace(/\./g, '')
+    .replace(/,/g, '.');
+  var parsed = Number(normalized);
+  return isNaN(parsed) ? null : parsed;
+}
+
+function formatNumberValue(value, decimals) {
+  var parsed = parseNumericValue(value);
+  if (parsed === null) return '-';
+  return parsed.toLocaleString('pt-PT', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  });
+}
+
+function formatCurrencyValue(value) {
+  var parsed = parseNumericValue(value);
+  if (parsed === null) return '-';
+  return parsed.toLocaleString('pt-PT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function openLeadDetailFromInventory(leadName) {
+  if (!leadName || leadName === '-') return;
+  selectedDetailLead = leadName;
+  selectedLead = leadName;
+  var row = findLeadRow(leadName);
+  selectedUnit = row && row.unitSelected ? row.unitSelected : '';
+  renderLeadDetail();
+  assignmentContext = null;
+  showScreen('screen-lead-detail');
+}
+
 function renderDetailStageOptions(selectedStage) {
   var select = document.getElementById('detail-stage');
   if (!select) return;
@@ -1837,7 +1953,7 @@ function renderInventory() {
 
   var head = document.createElement('div');
   head.className = 'inventory-table-head';
-  ['Unit ID', 'Typology', 'SQM', 'List Price (EUR)', 'Price / SQM', 'Status', 'Assigned Lead'].forEach(function(label) {
+  ['Unit ID', 'Typology', 'SQM', 'List Price', 'Price / SQM', 'Status', 'Assigned Lead'].forEach(function(label) {
     var cell = document.createElement('span');
     cell.textContent = label;
     head.appendChild(cell);
@@ -1861,20 +1977,35 @@ function renderInventory() {
       }
 
       [
-        unit.unitId || '-',
-        unit.typology || '-',
-        unit.sqm || '-',
-        unit.listPrice || '-',
-        unit.pricePerSqm || '-',
-        unit.status || '-',
-        unit.linkedBuyerName || '-'
-      ].forEach(function(value, index) {
+        { value: unit.unitId || '-' },
+        { value: unit.typology || '-' },
+        { value: formatNumberValue(unit.sqm, 0), className: 'numeric muted' },
+        { value: formatCurrencyValue(unit.listPrice), className: 'numeric' },
+        { value: formatCurrencyValue(unit.pricePerSqm), className: 'numeric muted' },
+        { value: unit.status || '-', type: 'status' },
+        { value: unit.linkedBuyerName || '-', type: 'lead' }
+      ].forEach(function(config) {
         var cell = document.createElement('div');
-        cell.className = 'inventory-cell' + (index === 6 || index === 5 ? ' muted' : '');
-        if (assignmentContext && index === 5 && !assignable) {
-          cell.textContent = value + ' (locked)';
+        cell.className = 'inventory-cell' + (config.className ? ' ' + config.className : '');
+        if (config.type === 'status') {
+          var pill = document.createElement('span');
+          pill.className = 'status-pill ' + statusClassName(config.value);
+          pill.textContent = assignmentContext && !assignable ? config.value + ' (locked)' : config.value;
+          cell.className = 'inventory-cell';
+          cell.appendChild(pill);
+        } else if (config.type === 'lead' && config.value !== '-') {
+          var leadButton = document.createElement('button');
+          leadButton.className = 'inventory-lead-link';
+          leadButton.type = 'button';
+          leadButton.textContent = config.value;
+          leadButton.onclick = function(event) {
+            event.stopPropagation();
+            openLeadDetailFromInventory(config.value);
+          };
+          cell.className += ' muted';
+          cell.appendChild(leadButton);
         } else {
-          cell.textContent = value;
+          cell.textContent = config.value;
         }
         row.appendChild(cell);
       });
