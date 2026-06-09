@@ -246,6 +246,12 @@
     border: 0.5px solid var(--border);
   }
 
+  .btn-soft {
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 0.5px solid rgba(41, 69, 134, 0.12);
+  }
+
   .field-group { margin-bottom: 18px; }
   .field-row {
     display: grid;
@@ -638,7 +644,7 @@
   }
 
   .inventory-cell.numeric {
-    text-align: right;
+    text-align: center;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -696,6 +702,48 @@
 
   .detail-search {
     margin-bottom: 16px;
+  }
+
+  .detail-lead-title {
+    display: none;
+    margin: 0 0 14px;
+    font-family: var(--font-head);
+    font-size: 32px;
+    line-height: 1.05;
+    color: var(--text);
+  }
+
+  .detail-lead-title.visible {
+    display: block;
+  }
+
+  .detail-lead-list {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 20px;
+  }
+
+  .detail-lead-list.hidden {
+    display: none;
+  }
+
+  .detail-lead-option {
+    appearance: none;
+    width: 100%;
+    text-align: left;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .detail-lead-option:active {
+    background: var(--accent-light);
+    border-color: rgba(41, 69, 134, 0.12);
   }
 
   .detail-grid {
@@ -1334,6 +1382,9 @@
     </div>
   </div>
 
+  <div class="detail-lead-title" id="detail-lead-title"></div>
+  <div class="detail-lead-list" id="detail-lead-list"></div>
+
   <div class="card">
     <div class="detail-grid">
       <div class="detail-field">
@@ -1368,7 +1419,7 @@
       </div>
       <div class="detail-field full">
         <div class="detail-actions">
-          <button class="btn btn-secondary" type="button" onclick="saveLeadDetail()">Save Lead Detail</button>
+          <button class="btn btn-soft" type="button" onclick="saveLeadDetail()">Save Lead Detail</button>
           <button class="btn btn-primary" type="button" onclick="openLogSignalFromDetail()">Log Signal</button>
         </div>
       </div>
@@ -1461,7 +1512,12 @@ function openInventory() {
 
 function openLeadDetail() {
   fetchData(true);
-  if (!selectedDetailLead && selectedLead) selectedDetailLead = selectedLead;
+  selectedDetailLead = null;
+  selectedDetailUnit = '';
+  var detailSearch = document.getElementById('detail-lead-search');
+  var detailResults = document.getElementById('detail-search-results');
+  if (detailSearch) detailSearch.value = '';
+  if (detailResults) detailResults.classList.remove('visible');
   renderLeadDetail();
   showScreen('screen-lead-detail');
 }
@@ -1652,22 +1708,38 @@ function showResults() {
 function filterDetailLeads() {
   var query = document.getElementById('detail-lead-search').value.toLowerCase().trim();
   var container = document.getElementById('detail-search-results');
-  if (query.length < 1) { container.classList.remove('visible'); return; }
-  var matches = allLeads.filter(function(n) { return n.toLowerCase().indexOf(query) !== -1; }).slice(0, 10);
-  container.innerHTML = '';
-  matches.forEach(function(name) {
-    var div = document.createElement('div');
-    div.className = 'search-result-item';
-    div.textContent = name;
-    div.onclick = function() { selectDetailLead(name); };
-    container.appendChild(div);
-  });
-  container.classList.toggle('visible', matches.length > 0);
+  if (container) container.classList.remove('visible');
+  updateDetailLeadList(query);
 }
 
 function showDetailResults() {
-  var query = document.getElementById('detail-lead-search').value.trim();
-  if (query.length >= 1) filterDetailLeads();
+  updateDetailLeadList(document.getElementById('detail-lead-search').value.trim());
+}
+
+function updateDetailLeadList(query) {
+  var list = document.getElementById('detail-lead-list');
+  if (!list) return;
+  if (selectedDetailLead) {
+    list.classList.add('hidden');
+    list.innerHTML = '';
+    return;
+  }
+
+  var normalizedQuery = String(query || '').toLowerCase().trim();
+  var matches = allLeads.filter(function(name) {
+    return !normalizedQuery || name.toLowerCase().indexOf(normalizedQuery) !== -1;
+  }).slice(0, normalizedQuery ? 12 : 16);
+
+  list.innerHTML = '';
+  list.classList.toggle('hidden', matches.length === 0);
+  matches.forEach(function(name) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'detail-lead-option';
+    button.textContent = name;
+    button.onclick = function() { selectDetailLead(name); };
+    list.appendChild(button);
+  });
 }
 
 function selectDetailLead(name) {
@@ -1676,7 +1748,7 @@ function selectDetailLead(name) {
   selectedDetailUnit = row && row.unitSelected ? row.unitSelected : '';
   var search = document.getElementById('detail-lead-search');
   var results = document.getElementById('detail-search-results');
-  if (search) search.value = name;
+  if (search) search.value = '';
   if (results) results.classList.remove('visible');
   renderLeadDetail();
 }
@@ -2001,11 +2073,29 @@ function renderInventory() {
     ? '0.9fr 1.05fr 1fr 0.7fr 1.05fr 0.95fr 0.95fr 1.2fr'
     : '1.05fr 1fr 0.7fr 1.05fr 0.95fr 0.95fr 1.2fr';
   (showAssignColumn
-    ? ['Assign', 'Unit ID', 'Typology', 'SQM', 'List Price', 'Price / SQM', 'Status', 'Assigned Lead']
-    : ['Unit ID', 'Typology', 'SQM', 'List Price', 'Price / SQM', 'Status', 'Assigned Lead']
-  ).forEach(function(label) {
+    ? [
+        { label: 'Assign' },
+        { label: 'Unit ID' },
+        { label: 'Typology' },
+        { label: 'SQM', centered: true },
+        { label: 'List Price', centered: true },
+        { label: 'Price / SQM', centered: true },
+        { label: 'Status' },
+        { label: 'Assigned Lead' }
+      ]
+    : [
+        { label: 'Unit ID' },
+        { label: 'Typology' },
+        { label: 'SQM', centered: true },
+        { label: 'List Price', centered: true },
+        { label: 'Price / SQM', centered: true },
+        { label: 'Status' },
+        { label: 'Assigned Lead' }
+      ]
+  ).forEach(function(config) {
     var cell = document.createElement('span');
-    cell.textContent = label;
+    cell.textContent = config.label;
+    if (config.centered) cell.style.textAlign = 'center';
     head.appendChild(cell);
   });
   container.appendChild(head);
@@ -2089,7 +2179,7 @@ function renderInventory() {
 }
 
 function renderLeadDetail() {
-  var row = findLeadRow(selectedDetailLead || selectedLead);
+  var row = findLeadRow(selectedDetailLead);
   var stageEl = document.getElementById('detail-stage');
   var unitEl = document.getElementById('detail-unit');
   var nextActionEl = document.getElementById('detail-next-action');
@@ -2098,8 +2188,8 @@ function renderLeadDetail() {
   var lastContactEl = document.getElementById('detail-last-contact');
   var contactLogEl = document.getElementById('contact-log-list');
   var detailSearchEl = document.getElementById('detail-lead-search');
+  var detailTitleEl = document.getElementById('detail-lead-title');
   if (!stageEl || !unitEl || !nextActionEl || !nextActionDateEl || !nextActionOwnerEl || !lastContactEl || !contactLogEl) return;
-  if (detailSearchEl && (selectedDetailLead || selectedLead)) detailSearchEl.value = selectedDetailLead || selectedLead;
 
   if (!row) {
     renderDetailStageOptions('');
@@ -2114,9 +2204,19 @@ function renderLeadDetail() {
     updateUnitSelectionDisplays();
     lastContactEl.textContent = '-';
     contactLogEl.innerHTML = '<div class="empty-state">No contact log yet.</div>';
+    if (detailTitleEl) {
+      detailTitleEl.textContent = '';
+      detailTitleEl.classList.remove('visible');
+    }
+    if (detailSearchEl) detailSearchEl.value = '';
+    updateDetailLeadList(detailSearchEl ? detailSearchEl.value : '');
     return;
   }
 
+  if (detailTitleEl) {
+    detailTitleEl.textContent = row.leadName || selectedDetailLead || '';
+    detailTitleEl.classList.add('visible');
+  }
   renderDetailStageOptions(row.stage || '');
   stageEl.disabled = false;
   nextActionEl.disabled = false;
@@ -2127,6 +2227,7 @@ function renderLeadDetail() {
   nextActionOwnerEl.value = row.nextActionOwner || currentSubmitter || '';
   updateUnitSelectionDisplays();
   lastContactEl.textContent = row.lastContactSummary || row.lastContact || '-';
+  updateDetailLeadList('');
 
   var logItems = (row.contactLog || '').split(/\n+/).map(function(line) { return line.trim(); }).filter(Boolean);
   if (!logItems.length) {
@@ -2199,11 +2300,9 @@ function saveLeadDetail() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
-    mode: 'cors'
+    mode: 'no-cors'
   })
-  .then(function(r) { return r.json(); })
-  .then(function(result) {
-    if (!result.success) throw new Error(result.error || 'Could not save lead detail.');
+  .then(function() {
     dataLoaded = false;
     fetchData(true);
   })
