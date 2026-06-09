@@ -252,6 +252,16 @@
     border: 0.5px solid rgba(41, 69, 134, 0.12);
   }
 
+  .btn-danger {
+    background: var(--error-bg);
+    border: 0.5px solid rgba(160, 69, 58, 0.22);
+    color: var(--error);
+  }
+
+  .btn-danger:hover {
+    border-color: rgba(160, 69, 58, 0.42);
+  }
+
   .field-group { margin-bottom: 18px; }
   .field-row {
     display: grid;
@@ -872,6 +882,29 @@
   }
   .loading-overlay.visible { display: flex; }
 
+  .toast {
+    display: none;
+    background: rgba(165, 167, 141, 0.96);
+    border: 0.5px solid rgba(90, 96, 68, 0.2);
+    border-radius: 999px;
+    box-shadow: 0 14px 38px rgba(90, 96, 68, 0.22);
+    color: #fff;
+    font-family: var(--font-accent);
+    font-size: 18px;
+    font-weight: 700;
+    left: 50%;
+    letter-spacing: 0.02em;
+    padding: 13px 24px;
+    position: fixed;
+    top: 18px;
+    transform: translateX(-50%);
+    z-index: 40;
+  }
+
+  .toast.visible {
+    display: block;
+  }
+
   .submitter-chip {
     font-family: var(--font-body);
     font-size: 12px;
@@ -1109,6 +1142,7 @@
 </style>
 </head>
 <body>
+<div class="toast" id="app-toast" role="status" aria-live="polite"></div>
 
 <!-- ===== SCREEN 1: GATE ===== -->
 <div class="screen" id="screen-gate">
@@ -1425,7 +1459,7 @@
       <div class="detail-field full">
         <div class="detail-actions">
           <button class="btn btn-soft" id="detail-edit-btn" type="button" onclick="beginLeadDetailEdit()">Edit Details</button>
-          <button class="btn btn-secondary hidden" id="detail-cancel-btn" type="button" onclick="cancelLeadDetailEdit()">Cancel</button>
+          <button class="btn btn-danger hidden" id="detail-cancel-btn" type="button" onclick="cancelLeadDetailEdit()">Cancel</button>
           <button class="btn btn-soft hidden" id="detail-save-btn" type="button" onclick="saveLeadDetail()">Save</button>
           <button class="btn btn-primary" id="detail-log-btn" type="button" onclick="openLogSignalFromDetail()">Log Signal</button>
         </div>
@@ -1907,6 +1941,18 @@ function updateUnitSelectionDisplays() {
   if (detailUnit) detailUnit.textContent = selectedDetailUnit || 'No unit selected';
 }
 
+var toastTimer = null;
+function showToast(message) {
+  var toast = document.getElementById('app-toast');
+  if (!toast || !message) return;
+  toast.textContent = message;
+  toast.classList.add('visible');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() {
+    toast.classList.remove('visible');
+  }, 2200);
+}
+
 function setLeadDetailEditing(isEditing) {
   detailEditMode = !!isEditing;
   var disabled = !detailEditMode;
@@ -2369,6 +2415,7 @@ function saveLeadDetail() {
   .then(function() {
     detailDraft = null;
     setLeadDetailEditing(false);
+    showToast('Lead details saved');
     dataLoaded = false;
     setTimeout(function() {
       fetchData(true);
