@@ -789,11 +789,16 @@
     display: flex;
     gap: 10px;
     margin: 4px 0 18px;
+    flex-wrap: wrap;
   }
 
   .detail-actions .btn {
     width: auto;
     flex: 1;
+  }
+
+  .detail-actions .btn.hidden {
+    display: none;
   }
 
   .inventory-assign-cell {
@@ -1419,8 +1424,10 @@
       </div>
       <div class="detail-field full">
         <div class="detail-actions">
-          <button class="btn btn-soft" type="button" onclick="saveLeadDetail()">Save Lead Detail</button>
-          <button class="btn btn-primary" type="button" onclick="openLogSignalFromDetail()">Log Signal</button>
+          <button class="btn btn-soft" id="detail-edit-btn" type="button" onclick="beginLeadDetailEdit()">Edit Details</button>
+          <button class="btn btn-secondary hidden" id="detail-cancel-btn" type="button" onclick="cancelLeadDetailEdit()">Cancel</button>
+          <button class="btn btn-soft hidden" id="detail-save-btn" type="button" onclick="saveLeadDetail()">Save</button>
+          <button class="btn btn-primary" id="detail-log-btn" type="button" onclick="openLogSignalFromDetail()">Log Signal</button>
         </div>
       </div>
     </div>
@@ -1469,6 +1476,8 @@ var selectedLead = null;
 var selectedUnit = '';
 var selectedDetailLead = null;
 var selectedDetailUnit = '';
+var detailEditMode = false;
+var detailDraft = null;
 var assignmentContext = null;
 var currentSubmitter = null;
 var currentRole = 'user';
@@ -1514,6 +1523,8 @@ function openLeadDetail() {
   fetchData(true);
   selectedDetailLead = null;
   selectedDetailUnit = '';
+  detailEditMode = false;
+  detailDraft = null;
   var detailSearch = document.getElementById('detail-lead-search');
   var detailResults = document.getElementById('detail-search-results');
   if (detailSearch) detailSearch.value = '';
@@ -1746,6 +1757,8 @@ function selectDetailLead(name) {
   selectedDetailLead = name;
   var row = findLeadRow(name);
   selectedDetailUnit = row && row.unitSelected ? row.unitSelected : '';
+  detailEditMode = false;
+  detailDraft = null;
   var search = document.getElementById('detail-lead-search');
   var results = document.getElementById('detail-search-results');
   if (search) search.value = '';
@@ -1894,6 +1907,61 @@ function updateUnitSelectionDisplays() {
   if (detailUnit) detailUnit.textContent = selectedDetailUnit || 'No unit selected';
 }
 
+function setLeadDetailEditing(isEditing) {
+  detailEditMode = !!isEditing;
+  var disabled = !detailEditMode;
+  ['detail-stage', 'detail-next-action', 'detail-next-action-date', 'detail-next-action-owner'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+  ['detail-edit-btn', 'detail-log-btn'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', detailEditMode);
+  });
+  ['detail-cancel-btn', 'detail-save-btn'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !detailEditMode);
+  });
+  var clearBtn = document.querySelector('[onclick="clearAssignedUnit(\'detail\')"]');
+  var assignBtn = document.querySelector('[onclick="chooseUnitForDetail()"]');
+  if (clearBtn) clearBtn.disabled = disabled;
+  if (assignBtn) assignBtn.disabled = disabled;
+}
+
+function beginLeadDetailEdit() {
+  if (!selectedDetailLead) return;
+  detailDraft = {
+    stage: document.getElementById('detail-stage').value,
+    nextAction: document.getElementById('detail-next-action').value,
+    nextActionDate: document.getElementById('detail-next-action-date').value,
+    nextActionOwner: document.getElementById('detail-next-action-owner').value,
+    unitSelected: selectedDetailUnit || ''
+  };
+  setLeadDetailEditing(true);
+}
+
+function cancelLeadDetailEdit() {
+  if (!selectedDetailLead) {
+    setLeadDetailEditing(false);
+    detailDraft = null;
+    return;
+  }
+  if (detailDraft) {
+    document.getElementById('detail-stage').value = detailDraft.stage || '';
+    document.getElementById('detail-next-action').value = detailDraft.nextAction || '';
+    document.getElementById('detail-next-action-date').value = detailDraft.nextActionDate || '';
+    document.getElementById('detail-next-action-owner').value = detailDraft.nextActionOwner || currentSubmitter || '';
+    selectedDetailUnit = detailDraft.unitSelected || '';
+    updateUnitSelectionDisplays();
+  } else {
+    var row = findLeadRow(selectedDetailLead);
+    selectedDetailUnit = row && row.unitSelected ? row.unitSelected : '';
+    renderLeadDetail();
+  }
+  detailDraft = null;
+  setLeadDetailEditing(false);
+}
+
 function chooseUnitForForm() {
   assignmentContext = 'form';
   fetchData(true);
@@ -1902,7 +1970,7 @@ function chooseUnitForForm() {
 }
 
 function chooseUnitForDetail() {
-  if (!selectedDetailLead) return;
+  if (!selectedDetailLead || !detailEditMode) return;
   assignmentContext = 'detail';
   fetchData(true);
   renderInventory();
@@ -1911,6 +1979,7 @@ function chooseUnitForDetail() {
 
 function clearAssignedUnit(context) {
   if (context === 'detail') {
+    if (!detailEditMode) return;
     selectedDetailUnit = '';
   } else {
     selectedUnit = '';
@@ -2006,6 +2075,8 @@ function openLeadDetailFromInventory(leadName) {
   selectedDetailLead = leadName;
   var row = findLeadRow(leadName);
   selectedDetailUnit = row && row.unitSelected ? row.unitSelected : '';
+  detailEditMode = false;
+  detailDraft = null;
   renderLeadDetail();
   assignmentContext = null;
   showScreen('screen-lead-detail');
@@ -2193,13 +2264,9 @@ function renderLeadDetail() {
 
   if (!row) {
     renderDetailStageOptions('');
-    stageEl.disabled = true;
     nextActionEl.value = '';
-    nextActionEl.disabled = true;
     nextActionDateEl.value = '';
-    nextActionDateEl.disabled = true;
     nextActionOwnerEl.value = currentSubmitter || '';
-    nextActionOwnerEl.disabled = true;
     selectedDetailUnit = '';
     updateUnitSelectionDisplays();
     lastContactEl.textContent = '-';
@@ -2210,6 +2277,7 @@ function renderLeadDetail() {
     }
     if (detailSearchEl) detailSearchEl.value = '';
     updateDetailLeadList(detailSearchEl ? detailSearchEl.value : '');
+    setLeadDetailEditing(false);
     return;
   }
 
@@ -2218,16 +2286,13 @@ function renderLeadDetail() {
     detailTitleEl.classList.add('visible');
   }
   renderDetailStageOptions(row.stage || '');
-  stageEl.disabled = false;
-  nextActionEl.disabled = false;
-  nextActionDateEl.disabled = false;
-  nextActionOwnerEl.disabled = false;
   nextActionEl.value = row.nextAction || '';
   nextActionDateEl.value = formatDateForInput(row.nextActionDate);
   nextActionOwnerEl.value = row.nextActionOwner || currentSubmitter || '';
   updateUnitSelectionDisplays();
   lastContactEl.textContent = row.lastContactSummary || row.lastContact || '-';
   updateDetailLeadList('');
+  setLeadDetailEditing(detailEditMode);
 
   var logItems = (row.contactLog || '').split(/\n+/).map(function(line) { return line.trim(); }).filter(Boolean);
   if (!logItems.length) {
@@ -2284,7 +2349,7 @@ function openLogSignalFromDetail() {
 }
 
 function saveLeadDetail() {
-  if (!selectedDetailLead) return;
+  if (!selectedDetailLead || !detailEditMode) return;
 
   var payload = {
     action: 'updateLeadDetails',
@@ -2298,13 +2363,16 @@ function saveLeadDetail() {
 
   fetch(SCRIPT_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
     mode: 'no-cors'
   })
   .then(function() {
+    detailDraft = null;
+    setLeadDetailEditing(false);
     dataLoaded = false;
-    fetchData(true);
+    setTimeout(function() {
+      fetchData(true);
+    }, 250);
   })
   .catch(function(err) {
     alert(err.message || 'Could not save lead detail.');
