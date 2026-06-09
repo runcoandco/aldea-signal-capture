@@ -1963,6 +1963,9 @@ function renderInventory() {
   allUnits
     .slice()
     .sort(function(a, b) {
+      var priceA = parseNumericValue(a.listPrice) || 0;
+      var priceB = parseNumericValue(b.listPrice) || 0;
+      if (priceB !== priceA) return priceB - priceA;
       return String(a.unitId || '').localeCompare(String(b.unitId || ''));
     })
     .forEach(function(unit) {
