@@ -731,6 +731,12 @@
     color: var(--text);
   }
 
+  .detail-unit-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .detail-actions {
     display: flex;
     gap: 10px;
@@ -740,6 +746,19 @@
   .detail-actions .btn {
     width: auto;
     flex: 1;
+  }
+
+  .inventory-assign-cell {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .inventory-assign-cell .btn {
+    width: auto;
+    min-height: auto;
+    padding: 8px 10px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
   }
 
   .helper-copy {
@@ -1325,7 +1344,10 @@
         <label>Assigned Unit</label>
         <div class="detail-unit-box">
           <div class="detail-unit-copy" id="detail-unit">Select a lead to view details.</div>
-          <button class="btn btn-secondary" type="button" style="width:auto; min-height:auto; padding:10px 12px;" onclick="chooseUnitForDetail()">Assign Unit</button>
+          <div class="detail-unit-controls">
+            <button class="btn btn-secondary" type="button" style="width:auto; min-height:auto; padding:10px 12px;" onclick="clearAssignedUnit('detail')">Clear</button>
+            <button class="btn btn-secondary" type="button" style="width:auto; min-height:auto; padding:10px 12px;" onclick="chooseUnitForDetail()">Assign Unit</button>
+          </div>
         </div>
       </div>
       <div class="detail-field">
@@ -1346,8 +1368,8 @@
       </div>
       <div class="detail-field full">
         <div class="detail-actions">
-          <button class="btn btn-primary" type="button" onclick="saveLeadDetail()">Save Lead Detail</button>
-          <button class="btn btn-secondary" type="button" onclick="openLogSignalFromDetail()">Log Signal</button>
+          <button class="btn btn-secondary" type="button" onclick="saveLeadDetail()">Save Lead Detail</button>
+          <button class="btn btn-primary" type="button" onclick="openLogSignalFromDetail()">Log Signal</button>
         </div>
       </div>
     </div>
@@ -1395,6 +1417,7 @@ var allSources = ['Inner Community','Founder Network','Event / Experience','Part
 var selectedLead = null;
 var selectedUnit = '';
 var selectedDetailLead = null;
+var selectedDetailUnit = '';
 var assignmentContext = null;
 var currentSubmitter = null;
 var currentRole = 'user';
@@ -1421,7 +1444,6 @@ function updateSubmitterDisplays() {
 function startLog() {
   fetchData(true);
   resetForm();
-  selectedDetailLead = selectedLead || selectedDetailLead;
   showScreen('screen-form');
   updateUnitSelectionDisplays();
 }
@@ -1651,7 +1673,7 @@ function showDetailResults() {
 function selectDetailLead(name) {
   selectedDetailLead = name;
   var row = findLeadRow(name);
-  selectedUnit = row && row.unitSelected ? row.unitSelected : '';
+  selectedDetailUnit = row && row.unitSelected ? row.unitSelected : '';
   var search = document.getElementById('detail-lead-search');
   var results = document.getElementById('detail-search-results');
   if (search) search.value = name;
@@ -1663,6 +1685,7 @@ function selectLead(name) {
   selectedDetailLead = name;
   var row = findLeadRow(name);
   selectedUnit = row && row.unitSelected ? row.unitSelected : '';
+  selectedDetailUnit = row && row.unitSelected ? row.unitSelected : '';
   document.getElementById('lead-search').style.display = 'none';
   document.getElementById('search-results').classList.remove('visible');
   document.getElementById('selected-lead-name').textContent = name;
@@ -1684,6 +1707,7 @@ function clearLead() {
   selectedLead = null;
   selectedDetailLead = null;
   selectedUnit = '';
+  selectedDetailUnit = '';
   document.getElementById('lead-search').value = '';
   document.getElementById('lead-search').style.display = '';
   document.getElementById('selected-lead').classList.remove('visible');
@@ -1794,9 +1818,8 @@ function findLeadRow(name) {
 function updateUnitSelectionDisplays() {
   var formUnit = document.getElementById('form-unit-selected');
   var detailUnit = document.getElementById('detail-unit');
-  var current = selectedUnit || 'No unit selected';
-  if (formUnit) formUnit.textContent = current;
-  if (detailUnit) detailUnit.textContent = current;
+  if (formUnit) formUnit.textContent = selectedUnit || 'No unit selected';
+  if (detailUnit) detailUnit.textContent = selectedDetailUnit || 'No unit selected';
 }
 
 function chooseUnitForForm() {
@@ -1815,7 +1838,11 @@ function chooseUnitForDetail() {
 }
 
 function clearAssignedUnit(context) {
-  selectedUnit = '';
+  if (context === 'detail') {
+    selectedDetailUnit = '';
+  } else {
+    selectedUnit = '';
+  }
   updateUnitSelectionDisplays();
   if (context === 'detail') {
     renderLeadDetail();
@@ -1829,7 +1856,11 @@ function cancelInventorySelection() {
 }
 
 function assignUnitFromInventory(unitId) {
-  selectedUnit = unitId || '';
+  if (assignmentContext === 'detail') {
+    selectedDetailUnit = unitId || '';
+  } else {
+    selectedUnit = unitId || '';
+  }
   updateUnitSelectionDisplays();
   var destination = assignmentContext === 'detail' ? 'screen-lead-detail' : 'screen-form';
   assignmentContext = null;
@@ -1841,7 +1872,8 @@ function assignUnitFromInventory(unitId) {
 
 function isAssignableUnit(unit) {
   var status = String(unit.status || '').trim().toLowerCase();
-  return status === 'available' || unit.unitId === selectedUnit;
+  var currentUnit = assignmentContext === 'detail' ? selectedDetailUnit : selectedUnit;
+  return status === 'available' || unit.unitId === currentUnit;
 }
 
 function statusClassName(status) {
@@ -1856,11 +1888,23 @@ function statusClassName(status) {
 function parseNumericValue(value) {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'number') return isNaN(value) ? null : value;
-  var normalized = String(value)
-    .replace(/\s/g, '')
-    .replace(/€/g, '')
-    .replace(/\./g, '')
-    .replace(/,/g, '.');
+  var raw = String(value).trim().replace(/\s/g, '').replace(/€/g, '');
+  if (!raw) return null;
+  var normalized = raw;
+  var hasComma = raw.indexOf(',') !== -1;
+  var hasDot = raw.indexOf('.') !== -1;
+  if (hasComma && hasDot) {
+    var decimalSeparator = raw.lastIndexOf(',') > raw.lastIndexOf('.') ? ',' : '.';
+    var thousandsSeparator = decimalSeparator === ',' ? '.' : ',';
+    normalized = raw.split(thousandsSeparator).join('');
+    if (decimalSeparator === ',') normalized = normalized.replace(',', '.');
+  } else if (hasComma) {
+    normalized = raw.replace(',', '.');
+  } else if (hasDot) {
+    var parts = raw.split('.');
+    var isThousandsFormat = parts.length > 1 && parts.slice(1).every(function(part) { return part.length === 3; });
+    normalized = isThousandsFormat ? parts.join('') : raw;
+  }
   var parsed = Number(normalized);
   return isNaN(parsed) ? null : parsed;
 }
@@ -1888,9 +1932,8 @@ function formatCurrencyValue(value) {
 function openLeadDetailFromInventory(leadName) {
   if (!leadName || leadName === '-') return;
   selectedDetailLead = leadName;
-  selectedLead = leadName;
   var row = findLeadRow(leadName);
-  selectedUnit = row && row.unitSelected ? row.unitSelected : '';
+  selectedDetailUnit = row && row.unitSelected ? row.unitSelected : '';
   renderLeadDetail();
   assignmentContext = null;
   showScreen('screen-lead-detail');
@@ -1927,6 +1970,7 @@ function renderInventory() {
   var container = document.getElementById('inventory-list');
   var context = document.getElementById('inventory-context');
   var contextCopy = document.getElementById('inventory-context-copy');
+  var showAssignColumn = !!assignmentContext;
   if (!container) return;
   container.innerHTML = '';
   if (context && contextCopy) {
@@ -1953,7 +1997,13 @@ function renderInventory() {
 
   var head = document.createElement('div');
   head.className = 'inventory-table-head';
-  ['Unit ID', 'Typology', 'SQM', 'List Price', 'Price / SQM', 'Status', 'Assigned Lead'].forEach(function(label) {
+  head.style.gridTemplateColumns = showAssignColumn
+    ? '0.9fr 1.05fr 1fr 0.7fr 1.05fr 0.95fr 0.95fr 1.2fr'
+    : '1.05fr 1fr 0.7fr 1.05fr 0.95fr 0.95fr 1.2fr';
+  (showAssignColumn
+    ? ['Assign', 'Unit ID', 'Typology', 'SQM', 'List Price', 'Price / SQM', 'Status', 'Assigned Lead']
+    : ['Unit ID', 'Typology', 'SQM', 'List Price', 'Price / SQM', 'Status', 'Assigned Lead']
+  ).forEach(function(label) {
     var cell = document.createElement('span');
     cell.textContent = label;
     head.appendChild(cell);
@@ -1971,12 +2021,33 @@ function renderInventory() {
     .forEach(function(unit) {
       var row = document.createElement('div');
       row.className = 'inventory-table-row';
+      row.style.gridTemplateColumns = head.style.gridTemplateColumns;
       var assignable = !assignmentContext || isAssignableUnit(unit);
-      if (assignmentContext && assignable) {
+      if (!showAssignColumn && assignmentContext && assignable) {
         row.className += ' assignable';
         row.onclick = function() {
           assignUnitFromInventory(unit.unitId);
         };
+      }
+
+      if (showAssignColumn) {
+        var assignCell = document.createElement('div');
+        assignCell.className = 'inventory-cell inventory-assign-cell';
+        if (assignable) {
+          var assignButton = document.createElement('button');
+          assignButton.className = 'btn btn-secondary';
+          assignButton.type = 'button';
+          assignButton.textContent = 'Assign';
+          assignButton.onclick = function(event) {
+            event.stopPropagation();
+            assignUnitFromInventory(unit.unitId);
+          };
+          assignCell.appendChild(assignButton);
+        } else {
+          assignCell.textContent = '-';
+          assignCell.className += ' muted';
+        }
+        row.appendChild(assignCell);
       }
 
       [
@@ -2039,13 +2110,13 @@ function renderLeadDetail() {
     nextActionDateEl.disabled = true;
     nextActionOwnerEl.value = currentSubmitter || '';
     nextActionOwnerEl.disabled = true;
-    unitEl.textContent = 'Select a lead to view details.';
+    selectedDetailUnit = '';
+    updateUnitSelectionDisplays();
     lastContactEl.textContent = '-';
     contactLogEl.innerHTML = '<div class="empty-state">No contact log yet.</div>';
     return;
   }
 
-  if (!selectedUnit) selectedUnit = row.unitSelected || '';
   renderDetailStageOptions(row.stage || '');
   stageEl.disabled = false;
   nextActionEl.disabled = false;
@@ -2054,7 +2125,7 @@ function renderLeadDetail() {
   nextActionEl.value = row.nextAction || '';
   nextActionDateEl.value = formatDateForInput(row.nextActionDate);
   nextActionOwnerEl.value = row.nextActionOwner || currentSubmitter || '';
-  unitEl.textContent = selectedUnit || 'No unit selected';
+  updateUnitSelectionDisplays();
   lastContactEl.textContent = row.lastContactSummary || row.lastContact || '-';
 
   var logItems = (row.contactLog || '').split(/\n+/).map(function(line) { return line.trim(); }).filter(Boolean);
@@ -2067,13 +2138,9 @@ function renderLeadDetail() {
   logItems.slice().reverse().forEach(function(line) {
     var item = document.createElement('div');
     item.className = 'contact-log-item';
-    var title = document.createElement('div');
-    title.className = 'contact-log-title';
-    title.textContent = row.leadName;
     var body = document.createElement('div');
     body.className = 'contact-log-body';
     body.textContent = line;
-    item.appendChild(title);
     item.appendChild(body);
     contactLogEl.appendChild(item);
   });
@@ -2103,6 +2170,8 @@ function coerceDisplayDate(value) {
     if (year < 100) year += 2000;
     return new Date(year, parseInt(dmy[2], 10) - 1, parseInt(dmy[1], 10));
   }
+  var nativeDate = new Date(text);
+  if (!isNaN(nativeDate.getTime())) return nativeDate;
   return null;
 }
 
@@ -2123,7 +2192,7 @@ function saveLeadDetail() {
     nextAction: document.getElementById('detail-next-action').value.trim(),
     nextActionDate: document.getElementById('detail-next-action-date').value,
     nextActionOwner: document.getElementById('detail-next-action-owner').value,
-    unitSelected: selectedUnit || ''
+    unitSelected: selectedDetailUnit || ''
   };
 
   fetch(SCRIPT_URL, {
