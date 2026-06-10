@@ -727,10 +727,39 @@
     display: block;
   }
 
+  .detail-lead-header {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 14px;
+  }
+
+  .detail-lead-header.visible {
+    display: flex;
+  }
+
+  .detail-back-btn {
+    width: auto;
+    min-height: auto;
+    padding: 10px 14px;
+    background: var(--accent-light);
+    border: 0.5px solid rgba(41, 69, 134, 0.14);
+    border-radius: 999px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
   .detail-lead-list {
     display: grid;
     gap: 8px;
     margin: 12px 0 20px;
+    max-height: 520px;
+    overflow-y: auto;
   }
 
   .detail-lead-list.hidden {
@@ -761,6 +790,10 @@
     grid-template-columns: 1fr 1fr;
     gap: 14px 12px;
     margin-bottom: 18px;
+  }
+
+  .detail-card-shell.hidden {
+    display: none;
   }
 
   .detail-field {
@@ -1421,10 +1454,13 @@
     </div>
   </div>
 
-  <div class="detail-lead-title" id="detail-lead-title"></div>
+  <div class="detail-lead-header" id="detail-lead-header">
+    <div class="detail-lead-title" id="detail-lead-title"></div>
+    <button class="detail-back-btn" type="button" onclick="resetLeadDetailSelection()">Back to Leads</button>
+  </div>
   <div class="detail-lead-list" id="detail-lead-list"></div>
 
-  <div class="card">
+  <div class="card detail-card-shell hidden" id="detail-card-shell">
     <div class="detail-grid">
       <div class="detail-field">
         <label>Lead Stage</label>
@@ -1555,6 +1591,16 @@ function openInventory() {
 
 function openLeadDetail() {
   fetchData(true);
+  resetLeadDetailSelection();
+  var detailSearch = document.getElementById('detail-lead-search');
+  var detailResults = document.getElementById('detail-search-results');
+  if (detailSearch) detailSearch.value = '';
+  if (detailResults) detailResults.classList.remove('visible');
+  renderLeadDetail();
+  showScreen('screen-lead-detail');
+}
+
+function resetLeadDetailSelection() {
   selectedDetailLead = null;
   selectedDetailUnit = '';
   detailEditMode = false;
@@ -1564,7 +1610,6 @@ function openLeadDetail() {
   if (detailSearch) detailSearch.value = '';
   if (detailResults) detailResults.classList.remove('visible');
   renderLeadDetail();
-  showScreen('screen-lead-detail');
 }
 
 function goHome() {
@@ -1630,37 +1675,10 @@ document.getElementById('gate-enter-btn').addEventListener('touchend', function(
 // Data fetch
 // ============================================================
 function fetchData(force) {
-  if (dataLoaded && !force) return;
-  var url = SCRIPT_URL + (SCRIPT_URL.indexOf('?') === -1 ? '?' : '&') + 'fresh=' + Date.now();
-  fetch(url, { cache: 'no-store' })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.success) {
-        allLeads = data.leads || [];
-        allOwners = data.owners || [];
-        allPipelineRows = data.pipelineRows || [];
-        allUnits = data.units || [];
-        currentSubmitter = resolveSignalOwner(currentSubmitter);
-        localStorage.setItem('aldea_submitter', currentSubmitter);
-        updateSubmitterDisplays();
-        allOverdueActions = data.overdueActions || [];
-        allComingActions = data.comingActions || [];
-        dataLoaded = true;
-        renderIdentityButtons();
-        renderOwnerDropdowns();
-        updateUnitSelectionDisplays();
-        renderHomeSummary();
-        renderOverdueActions();
-        renderInventory();
-        renderLeadDetail();
-      } else {
-        showLoadError(data.error || 'Could not load CRM data.');
-      }
-    })
-    .catch(function(err) {
+  fetchDataAsync(force).catch(function(err) {
       console.error('Fetch error:', err);
       showLoadError('Could not reach the CRM.');
-    });
+  });
 }
 
 function showLoadError(message) {
@@ -1773,10 +1791,15 @@ function updateDetailLeadList(query) {
   var normalizedQuery = String(query || '').toLowerCase().trim();
   var matches = allLeads.filter(function(name) {
     return !normalizedQuery || name.toLowerCase().indexOf(normalizedQuery) !== -1;
-  }).slice(0, normalizedQuery ? 12 : 16);
+  });
 
   list.innerHTML = '';
-  list.classList.toggle('hidden', matches.length === 0);
+  if (!matches.length) {
+    list.classList.remove('hidden');
+    list.innerHTML = '<div class="empty-state">No leads found.</div>';
+    return;
+  }
+  list.classList.remove('hidden');
   matches.forEach(function(name) {
     var button = document.createElement('button');
     button.type = 'button';
@@ -1874,30 +1897,89 @@ function createNewLead() {
   document.getElementById('create-lead-btn').disabled = true;
   document.getElementById('create-lead-btn').textContent = 'Adding...';
 
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'createLead',
-      leadName: name,
-      owner: owner,
-      source: source
-    }),
-    mode: 'no-cors'
+  postToScript({
+    action: 'createLead',
+    leadName: name,
+    owner: owner,
+    source: source
   })
-  .then(function() {
-    allLeads.push(name);
-    allLeads.sort();
-    selectLead(name);
-    document.getElementById('new-lead-name').value = '';
-    document.getElementById('new-lead-form').classList.remove('visible');
-    document.getElementById('create-lead-btn').disabled = false;
-    document.getElementById('create-lead-btn').textContent = 'Add lead';
+  .then(function(result) {
+    if (!result || !result.success) {
+      throw new Error(result && result.error ? result.error : 'Failed to add lead');
+    }
+    dataLoaded = false;
+    return fetchDataAsync(true).then(function() {
+      if (allLeads.indexOf(name) === -1) {
+        throw new Error('Lead was not added to the CRM.');
+      }
+      selectLead(name);
+      document.getElementById('new-lead-name').value = '';
+      document.getElementById('new-lead-form').classList.remove('visible');
+      showToast('Lead added to CRM');
+    });
   })
   .catch(function(err) {
-    errEl.textContent = 'Failed to add lead';
+    errEl.textContent = err && err.message ? err.message : 'Failed to add lead';
+  })
+  .finally(function() {
     document.getElementById('create-lead-btn').disabled = false;
     document.getElementById('create-lead-btn').textContent = 'Add lead';
+  });
+}
+
+function fetchDataAsync(force) {
+  return new Promise(function(resolve, reject) {
+    if (dataLoaded && !force) {
+      resolve({
+        success: true,
+        leads: allLeads,
+        owners: allOwners,
+        pipelineRows: allPipelineRows,
+        units: allUnits
+      });
+      return;
+    }
+
+    var url = SCRIPT_URL + (SCRIPT_URL.indexOf('?') === -1 ? '?' : '&') + 'fresh=' + Date.now();
+    fetch(url, { cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) {
+          reject(new Error(data.error || 'Could not load CRM data.'));
+          return;
+        }
+        allLeads = data.leads || [];
+        allOwners = data.owners || [];
+        allPipelineRows = data.pipelineRows || [];
+        allUnits = data.units || [];
+        currentSubmitter = resolveSignalOwner(currentSubmitter);
+        localStorage.setItem('aldea_submitter', currentSubmitter);
+        updateSubmitterDisplays();
+        allOverdueActions = data.overdueActions || [];
+        allComingActions = data.comingActions || [];
+        dataLoaded = true;
+        renderIdentityButtons();
+        renderOwnerDropdowns();
+        updateUnitSelectionDisplays();
+        renderHomeSummary();
+        renderOverdueActions();
+        renderInventory();
+        renderLeadDetail();
+        resolve(data);
+      })
+      .catch(function(err) {
+        reject(err);
+      });
+  });
+}
+
+function postToScript(payload) {
+  return fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  }).then(function(response) {
+    return response.json();
   });
 }
 
@@ -2297,6 +2379,8 @@ function renderInventory() {
 
 function renderLeadDetail() {
   var row = findLeadRow(selectedDetailLead);
+  var cardShell = document.getElementById('detail-card-shell');
+  var detailHeaderEl = document.getElementById('detail-lead-header');
   var stageEl = document.getElementById('detail-stage');
   var unitEl = document.getElementById('detail-unit');
   var nextActionEl = document.getElementById('detail-next-action');
@@ -2309,6 +2393,7 @@ function renderLeadDetail() {
   if (!stageEl || !unitEl || !nextActionEl || !nextActionDateEl || !nextActionOwnerEl || !lastContactEl || !contactLogEl) return;
 
   if (!row) {
+    if (cardShell) cardShell.classList.add('hidden');
     renderDetailStageOptions('');
     nextActionEl.value = '';
     nextActionDateEl.value = '';
@@ -2317,6 +2402,7 @@ function renderLeadDetail() {
     updateUnitSelectionDisplays();
     lastContactEl.textContent = '-';
     contactLogEl.innerHTML = '<div class="empty-state">No contact log yet.</div>';
+    if (detailHeaderEl) detailHeaderEl.classList.remove('visible');
     if (detailTitleEl) {
       detailTitleEl.textContent = '';
       detailTitleEl.classList.remove('visible');
@@ -2327,6 +2413,8 @@ function renderLeadDetail() {
     return;
   }
 
+  if (cardShell) cardShell.classList.remove('hidden');
+  if (detailHeaderEl) detailHeaderEl.classList.add('visible');
   if (detailTitleEl) {
     detailTitleEl.textContent = row.leadName || selectedDetailLead || '';
     detailTitleEl.classList.add('visible');
@@ -2407,19 +2495,16 @@ function saveLeadDetail() {
     unitSelected: selectedDetailUnit || ''
   };
 
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-    mode: 'no-cors'
-  })
-  .then(function() {
+  postToScript(payload)
+  .then(function(result) {
+    if (!result || !result.success) {
+      throw new Error(result && result.error ? result.error : 'Could not save lead detail.');
+    }
     detailDraft = null;
     setLeadDetailEditing(false);
     showToast('Lead details saved');
     dataLoaded = false;
-    setTimeout(function() {
-      fetchData(true);
-    }, 250);
+    return fetchDataAsync(true);
   })
   .catch(function(err) {
     alert(err.message || 'Could not save lead detail.');
@@ -2590,10 +2675,7 @@ function submitSignal() {
   document.getElementById('form-loading').classList.add('visible');
   document.getElementById('submit-btn').disabled = true;
 
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  postToScript({
       action: 'logSignal',
       leadName: selectedLead,
       whatHappened: whatHappened,
@@ -2602,14 +2684,16 @@ function submitSignal() {
       nextActionOwner: nextOwner,
       unitSelected: unitSelectedValue,
       submitter: currentSubmitter
-    }),
-    mode: 'no-cors'
   })
-  .then(function() {
+  .then(function(result) {
+    if (!result || !result.success) {
+      throw new Error(result && result.error ? result.error : 'Failed to save. Try again.');
+    }
     document.getElementById('form-loading').classList.remove('visible');
     document.getElementById('submit-btn').disabled = false;
     document.getElementById('confirm-detail').innerHTML =
       '<strong>' + selectedLead + '</strong><br>updated in Pipeline';
+    dataLoaded = false;
     showScreen('screen-confirm');
   })
   .catch(function(err) {
