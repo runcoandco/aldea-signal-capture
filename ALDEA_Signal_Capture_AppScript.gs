@@ -654,6 +654,10 @@ function handleCreateLead(data) {
     }
     // Col D: Stage (default to Stage 1)
     pipeline.getRange(newRow, 4).setValue('1 - Identified');
+    // Col E: Priority
+    if (data.priority) {
+      pipeline.getRange(newRow, CONFIG.COL_PRIORITY).setValue(String(data.priority).trim());
+    }
     // Col F: Source
     if (data.source) {
       pipeline.getRange(newRow, 6).setValue(data.source);
@@ -698,6 +702,26 @@ function handleUpdateLeadDetails(data) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    var updatedLeadName = data.updatedLeadName !== undefined
+      ? String(data.updatedLeadName || '').trim()
+      : String(data.leadName).trim();
+
+    if (!updatedLeadName) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: false, error: 'Updated lead name is required' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (updatedLeadName !== String(data.leadName).trim()) {
+      var duplicateRow = findLeadRowByName_(pipeline, updatedLeadName, lastRow);
+      if (duplicateRow !== -1 && duplicateRow !== leadRow) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ success: false, error: 'A lead with that name already exists.' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      pipeline.getRange(leadRow, CONFIG.COL_LEAD_NAME).setValue(updatedLeadName);
+    }
+
     if (data.stage !== undefined) {
       pipeline.getRange(leadRow, CONFIG.COL_STAGE).setValue(String(data.stage || '').trim());
     }
@@ -720,7 +744,7 @@ function handleUpdateLeadDetails(data) {
     }
 
     return ContentService
-      .createTextOutput(JSON.stringify({ success: true, lead: String(data.leadName).trim() }))
+      .createTextOutput(JSON.stringify({ success: true, lead: updatedLeadName }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService

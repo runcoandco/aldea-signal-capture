@@ -727,6 +727,24 @@
     display: block;
   }
 
+  .detail-lead-name-input {
+    display: none;
+    width: 100%;
+    max-width: 520px;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-family: var(--font-head);
+    font-size: 28px;
+    line-height: 1.05;
+    color: var(--text);
+  }
+
+  .detail-lead-name-input.visible {
+    display: block;
+  }
+
   .detail-lead-header {
     display: none;
     align-items: center;
@@ -1320,6 +1338,12 @@
             <select id="new-lead-owner"></select>
           </div>
           <div class="field-group">
+            <label>Priority</label>
+            <select id="new-lead-priority"></select>
+          </div>
+        </div>
+        <div class="new-lead-row">
+          <div class="field-group">
             <label>Source</label>
             <select id="new-lead-source">
               <option>Inner Community</option>
@@ -1332,7 +1356,10 @@
             </select>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="createNewLead()" id="create-lead-btn">Add lead</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="createNewLead()" id="create-lead-btn">Add lead</button>
+          <button class="btn btn-danger" type="button" style="width:auto;" onclick="cancelNewLead()">Cancel</button>
+        </div>
         <div class="error-msg" id="new-lead-error"></div>
       </div>
     </div>
@@ -1373,7 +1400,10 @@
       </div>
     </div>
 
-    <button class="btn btn-primary" id="submit-btn" onclick="submitSignal()">Log</button>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-primary" id="submit-btn" onclick="submitSignal()">Log</button>
+      <button class="btn btn-danger" type="button" style="width:auto;" onclick="cancelSignalEntry()">Cancel</button>
+    </div>
     <div class="error-msg" id="form-error"></div>
 
     <div class="loading-overlay" id="form-loading">
@@ -1455,7 +1485,10 @@
   </div>
 
   <div class="detail-lead-header" id="detail-lead-header">
-    <div class="detail-lead-title" id="detail-lead-title"></div>
+    <div style="flex:1; min-width:0;">
+      <div class="detail-lead-title" id="detail-lead-title"></div>
+      <input type="text" id="detail-lead-name-input" class="detail-lead-name-input" placeholder="Lead name">
+    </div>
     <button class="detail-back-btn" type="button" onclick="resetLeadDetailSelection()">Back to Leads</button>
   </div>
   <div class="detail-lead-list" id="detail-lead-list"></div>
@@ -1542,6 +1575,7 @@ var allUnits = [];
 var allOverdueActions = [];
 var allComingActions = [];
 var allSources = ['Inner Community','Founder Network','Event / Experience','Partner Lead','Referral','Inbound','Other'];
+var allPriorities = ['1 - Urgent','2 - High','3 - Mid','4 - Low'];
 var selectedLead = null;
 var selectedUnit = '';
 var selectedDetailLead = null;
@@ -1884,6 +1918,21 @@ function toggleNewLead() {
     document.getElementById('new-lead-name').focus();
   }
 }
+
+function cancelNewLead() {
+  document.getElementById('new-lead-form').classList.remove('visible');
+  document.getElementById('new-lead-name').value = '';
+  document.getElementById('new-lead-error').textContent = '';
+  if (document.getElementById('new-lead-priority')) {
+    document.getElementById('new-lead-priority').value = allPriorities[1] || allPriorities[0] || '';
+  }
+}
+
+function cancelSignalEntry() {
+  resetForm();
+  goHome();
+}
+
 function createNewLead() {
   var name = document.getElementById('new-lead-name').value.trim();
   var errEl = document.getElementById('new-lead-error');
@@ -1892,6 +1941,7 @@ function createNewLead() {
   if (allLeads.indexOf(name) !== -1) { errEl.textContent = 'Lead already exists'; return; }
 
   var owner = document.getElementById('new-lead-owner').value;
+  var priority = document.getElementById('new-lead-priority').value;
   var source = document.getElementById('new-lead-source').value;
 
   document.getElementById('create-lead-btn').disabled = true;
@@ -1901,6 +1951,7 @@ function createNewLead() {
     action: 'createLead',
     leadName: name,
     owner: owner,
+    priority: priority,
     source: source
   })
   .then(function(result) {
@@ -2004,6 +2055,26 @@ function renderOwnerDropdowns() {
       if (select) select.value = currentSubmitter;
     });
   }
+  renderPriorityDropdown();
+}
+
+function renderPriorityDropdown() {
+  var stagePriorities = {};
+  allPipelineRows.forEach(function(row) {
+    if (row.priority) stagePriorities[row.priority] = true;
+  });
+  var priorities = Object.keys(stagePriorities).sort();
+  if (!priorities.length) priorities = allPriorities.slice();
+  var select = document.getElementById('new-lead-priority');
+  if (!select) return;
+  select.innerHTML = '';
+  priorities.forEach(function(priority) {
+    var opt = document.createElement('option');
+    opt.value = priority;
+    opt.textContent = priority;
+    select.appendChild(opt);
+  });
+  select.value = priorities.indexOf('2 - High') !== -1 ? '2 - High' : (priorities[0] || '');
 }
 
 function findLeadRow(name) {
@@ -2042,6 +2113,13 @@ function setLeadDetailEditing(isEditing) {
     var el = document.getElementById(id);
     if (el) el.disabled = disabled;
   });
+  var titleEl = document.getElementById('detail-lead-title');
+  var nameInputEl = document.getElementById('detail-lead-name-input');
+  if (titleEl) titleEl.classList.toggle('visible', !!selectedDetailLead && !detailEditMode);
+  if (nameInputEl) {
+    nameInputEl.disabled = disabled;
+    nameInputEl.classList.toggle('visible', !!selectedDetailLead && detailEditMode);
+  }
   ['detail-edit-btn', 'detail-log-btn'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', detailEditMode);
@@ -2059,6 +2137,7 @@ function setLeadDetailEditing(isEditing) {
 function beginLeadDetailEdit() {
   if (!selectedDetailLead) return;
   detailDraft = {
+    leadName: selectedDetailLead,
     stage: document.getElementById('detail-stage').value,
     nextAction: document.getElementById('detail-next-action').value,
     nextActionDate: document.getElementById('detail-next-action-date').value,
@@ -2075,6 +2154,7 @@ function cancelLeadDetailEdit() {
     return;
   }
   if (detailDraft) {
+    document.getElementById('detail-lead-name-input').value = detailDraft.leadName || selectedDetailLead || '';
     document.getElementById('detail-stage').value = detailDraft.stage || '';
     document.getElementById('detail-next-action').value = detailDraft.nextAction || '';
     document.getElementById('detail-next-action-date').value = detailDraft.nextActionDate || '';
@@ -2390,6 +2470,7 @@ function renderLeadDetail() {
   var contactLogEl = document.getElementById('contact-log-list');
   var detailSearchEl = document.getElementById('detail-lead-search');
   var detailTitleEl = document.getElementById('detail-lead-title');
+  var detailNameInputEl = document.getElementById('detail-lead-name-input');
   if (!stageEl || !unitEl || !nextActionEl || !nextActionDateEl || !nextActionOwnerEl || !lastContactEl || !contactLogEl) return;
 
   if (!row) {
@@ -2407,6 +2488,10 @@ function renderLeadDetail() {
       detailTitleEl.textContent = '';
       detailTitleEl.classList.remove('visible');
     }
+    if (detailNameInputEl) {
+      detailNameInputEl.value = '';
+      detailNameInputEl.classList.remove('visible');
+    }
     if (detailSearchEl) detailSearchEl.value = '';
     updateDetailLeadList(detailSearchEl ? detailSearchEl.value : '');
     setLeadDetailEditing(false);
@@ -2417,8 +2502,8 @@ function renderLeadDetail() {
   if (detailHeaderEl) detailHeaderEl.classList.add('visible');
   if (detailTitleEl) {
     detailTitleEl.textContent = row.leadName || selectedDetailLead || '';
-    detailTitleEl.classList.add('visible');
   }
+  if (detailNameInputEl) detailNameInputEl.value = row.leadName || selectedDetailLead || '';
   renderDetailStageOptions(row.stage || '');
   nextActionEl.value = row.nextAction || '';
   nextActionDateEl.value = formatDateForInput(row.nextActionDate);
@@ -2484,10 +2569,16 @@ function openLogSignalFromDetail() {
 
 function saveLeadDetail() {
   if (!selectedDetailLead || !detailEditMode) return;
+  var updatedLeadName = document.getElementById('detail-lead-name-input').value.trim();
+  if (!updatedLeadName) {
+    alert('Lead name is required.');
+    return;
+  }
 
   var payload = {
     action: 'updateLeadDetails',
     leadName: selectedDetailLead,
+    updatedLeadName: updatedLeadName,
     stage: document.getElementById('detail-stage').value,
     nextAction: document.getElementById('detail-next-action').value.trim(),
     nextActionDate: document.getElementById('detail-next-action-date').value,
@@ -2500,6 +2591,7 @@ function saveLeadDetail() {
     if (!result || !result.success) {
       throw new Error(result && result.error ? result.error : 'Could not save lead detail.');
     }
+    selectedDetailLead = result.lead || updatedLeadName;
     detailDraft = null;
     setLeadDetailEditing(false);
     showToast('Lead details saved');
