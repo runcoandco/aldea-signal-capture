@@ -470,12 +470,6 @@ function doPost(e) {
     // Col Q: Last Contact date (update to now)
     pipeline.getRange(leadRow, 17).setValue(now);
 
-    try {
-      sendAssignmentEmailIfNeeded_(ss, data);
-    } catch (emailError) {
-      console.error('Assignment email failed: ' + emailError.message);
-    }
-
     return ContentService
       .createTextOutput(JSON.stringify({
         success: true,

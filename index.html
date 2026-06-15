@@ -2025,9 +2025,9 @@ function fetchDataAsync(force) {
 }
 
 function postToScript(payload) {
-  return fetch(SCRIPT_URL, {
+  return fetch('/api/signal', {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   }).then(function(response) {
     return response.json();
@@ -2784,14 +2784,15 @@ function submitSignal() {
     document.getElementById('form-loading').classList.remove('visible');
     document.getElementById('submit-btn').disabled = false;
     document.getElementById('confirm-detail').innerHTML =
-      '<strong>' + selectedLead + '</strong><br>updated in Pipeline';
+      '<strong>' + selectedLead + '</strong><br>updated in Pipeline' +
+      (result.warning ? '<br><span style="color:var(--warning);">' + result.warning + '</span>' : '');
     dataLoaded = false;
     showScreen('screen-confirm');
   })
   .catch(function(err) {
     document.getElementById('form-loading').classList.remove('visible');
     document.getElementById('submit-btn').disabled = false;
-    errorEl.textContent = 'Failed to save. Try again.';
+    errorEl.textContent = err && err.message ? err.message : 'Failed to save. Try again.';
   });
 }
 
