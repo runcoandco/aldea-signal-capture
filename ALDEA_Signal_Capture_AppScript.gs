@@ -1,12 +1,20 @@
-// ============================================================
-// ALDEA Signal Capture — Google Apps Script
-// ============================================================
+/**
+ * ALDEA CRM — Google Apps Script
+ * Version 1.3 | 2026-06-01
+ *
+ * Purpose:
+ * 1. Stamp stable Lead IDs once when a new lead is created.
+ * 2. Maintain Stage Entry Date.
+ * 3. Update probability when Stage changes.
+ * 4. Flag missing stage exit notes.
+ * 5. Promote Stage 5+ leads to Stage Tracker.
+ * 6. Sync Stage 6+ leads to Funding Source Tracker.
+ */
 // Paste this into Extensions > Apps Script in the CRM Google Sheet.
 // Deploy as Web App:
 //   Execute as: Me
 //   Who has access: Anyone
 // Copy the deployment URL and paste it into the HTML form (CONFIG.SCRIPT_URL).
-// ============================================================
 
 // --- Configuration ---
 var CONFIG = {
@@ -22,6 +30,12 @@ var CONFIG = {
   COL_OWNER: 3,            // C: Owner
   COL_STAGE: 4,            // D: Stage
   COL_PRIORITY: 5,         // E: Priority
+  COL_NATIONALITY: 8,      // H: Nationality
+  COL_EMAIL1: 9,           // I: Email 1
+  COL_EMAIL2: 10,          // J: Email 2
+  COL_PHONE: 11,           // K: Phone
+  COL_INTEREST_TYPE: 12,   // L: Interest Type
+  COL_TYPOLOGY: 13,        // M: Typology
   COL_LAST_CONTACT: 18,    // R: Last Contact Summary
   COL_NEXT_ACTION: 19,     // S: Next Action
   COL_NEXT_ACTION_DATE: 20, // T: Next Action Date
@@ -203,6 +217,11 @@ function toTrimmedString_(value) {
   return value ? String(value).trim() : '';
 }
 
+function isTerminalStage_(value) {
+  var stage = String(value || '').trim().toLowerCase();
+  return stage === '8 - closed' || stage === 'lost';
+}
+
 // ============================================================
 // getOverdueActions_ — Returns open next actions before today
 // ============================================================
@@ -229,7 +248,7 @@ function getOverdueActions_(pipeline) {
     var nextActionDate = row[CONFIG.COL_NEXT_ACTION_DATE - 1];
     var nextActionOwner = row[CONFIG.COL_NEXT_ACTION_OWNER - 1];
 
-    if (!leadName || !nextAction || !nextActionDate) {
+    if (!leadName || !nextAction || !nextActionDate || isTerminalStage_(stage)) {
       continue;
     }
 
@@ -292,7 +311,7 @@ function getComingActions_(pipeline) {
     var nextActionDate = row[CONFIG.COL_NEXT_ACTION_DATE - 1];
     var nextActionOwner = row[CONFIG.COL_NEXT_ACTION_OWNER - 1];
 
-    if (!leadName || !nextAction || !nextActionDate) {
+    if (!leadName || !nextAction || !nextActionDate || isTerminalStage_(stage)) {
       continue;
     }
 
@@ -381,7 +400,7 @@ function doPost(e) {
 
     // Default action: logSignal
     // Validate required fields
-    var required = ['leadName', 'whatHappened', 'nextAction', 'nextActionDate', 'nextActionOwner', 'submitter'];
+    var required = ['leadName', 'whatHappened', 'submitter'];
     for (var r = 0; r < required.length; r++) {
       if (!data[required[r]] || String(data[required[r]]).trim() === '') {
         return ContentService
@@ -718,6 +737,27 @@ function handleUpdateLeadDetails(data) {
 
     if (data.stage !== undefined) {
       pipeline.getRange(leadRow, CONFIG.COL_STAGE).setValue(String(data.stage || '').trim());
+    }
+    if (data.priority !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_PRIORITY).setValue(String(data.priority || '').trim());
+    }
+    if (data.nationality !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_NATIONALITY).setValue(String(data.nationality || '').trim());
+    }
+    if (data.email1 !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_EMAIL1).setValue(String(data.email1 || '').trim());
+    }
+    if (data.email2 !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_EMAIL2).setValue(String(data.email2 || '').trim());
+    }
+    if (data.phone !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_PHONE).setValue(String(data.phone || '').trim());
+    }
+    if (data.interestType !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_INTEREST_TYPE).setValue(String(data.interestType || '').trim());
+    }
+    if (data.typology !== undefined) {
+      pipeline.getRange(leadRow, CONFIG.COL_TYPOLOGY).setValue(String(data.typology || '').trim());
     }
     if (data.nextAction !== undefined) {
       pipeline.getRange(leadRow, CONFIG.COL_NEXT_ACTION).setValue(String(data.nextAction || '').trim());

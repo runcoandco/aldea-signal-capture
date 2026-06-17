@@ -2872,10 +2872,8 @@ function submitSignal() {
   var whatHappened = document.getElementById('what-happened').value.trim();
   if (!whatHappened) { errorEl.textContent = 'Describe what happened'; return; }
   var nextAction = document.getElementById('next-action').value.trim();
-  if (!nextAction) { errorEl.textContent = 'Enter the next action'; return; }
   var nextDate = document.getElementById('next-action-date').value;
-  if (!nextDate) { errorEl.textContent = 'Set the date'; return; }
-  var nextOwner = document.getElementById('next-action-owner').value;
+  var nextOwner = (nextAction || nextDate) ? document.getElementById('next-action-owner').value : '';
   var unitSelectedValue = selectedUnit || '';
 
   document.getElementById('form-loading').classList.add('visible');

@@ -45,6 +45,13 @@ module.exports = async function handler(request, response) {
       return response.status(200).json(crmResult);
     }
 
+    const hasTaskSyncFields = [body.nextAction, body.nextActionDate, body.nextActionOwner]
+      .every((value) => typeof value === "string" && value.trim() !== "");
+
+    if (!hasTaskSyncFields) {
+      return response.status(200).json(crmResult);
+    }
+
     const syncSecret = process.env.SIGNAL_TASK_SYNC_SECRET;
     if (!syncSecret) {
       return response.status(200).json({
