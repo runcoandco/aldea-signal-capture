@@ -1512,6 +1512,10 @@
         <select id="detail-stage"></select>
       </div>
       <div class="detail-field">
+        <label>Priority</label>
+        <select id="detail-priority"></select>
+      </div>
+      <div class="detail-field">
         <label>Assigned Unit</label>
         <div class="detail-unit-box">
           <div class="detail-unit-copy" id="detail-unit">Select a lead to view details.</div>
@@ -1532,6 +1536,30 @@
       <div class="detail-field">
         <label>Next Action Owner</label>
         <select id="detail-next-action-owner"></select>
+      </div>
+      <div class="detail-field">
+        <label>Nationality</label>
+        <input type="text" id="detail-nationality" placeholder="Nationality">
+      </div>
+      <div class="detail-field">
+        <label>Email 1</label>
+        <input type="text" id="detail-email1" placeholder="Primary email">
+      </div>
+      <div class="detail-field">
+        <label>Email 2</label>
+        <input type="text" id="detail-email2" placeholder="Secondary email">
+      </div>
+      <div class="detail-field">
+        <label>Phone</label>
+        <input type="text" id="detail-phone" placeholder="Phone">
+      </div>
+      <div class="detail-field">
+        <label>Interest Type</label>
+        <input type="text" id="detail-interest-type" placeholder="Interest type">
+      </div>
+      <div class="detail-field">
+        <label>Typology</label>
+        <input type="text" id="detail-typology" placeholder="Typology">
       </div>
       <div class="detail-field">
         <label>Last Contact</label>
@@ -1588,6 +1616,7 @@ var allOverdueActions = [];
 var allComingActions = [];
 var allSources = ['Inner Community','Founder Network','Event / Experience','Partner Lead','Referral','Inbound','Other'];
 var allPriorities = ['1 - Urgent','2 - High','3 - Mid','4 - Low'];
+var detailStageDefaults = ['1 - Identified','2 - Contacted','3 - Presented','4 - Experiencing','5 - Qualifying','6 - Reserved','7 - Under Contract','8 - Closed','Lost'];
 var selectedLead = null;
 var selectedUnit = '';
 var selectedDetailLead = null;
@@ -2072,6 +2101,7 @@ function renderOwnerDropdowns() {
     });
   }
   renderPriorityDropdown();
+  renderDetailPriorityOptions();
 }
 
 function renderPriorityDropdown() {
@@ -2125,7 +2155,7 @@ function showToast(message) {
 function setLeadDetailEditing(isEditing) {
   detailEditMode = !!isEditing;
   var disabled = !detailEditMode;
-  ['detail-stage', 'detail-next-action', 'detail-next-action-date', 'detail-next-action-owner'].forEach(function(id) {
+  ['detail-stage', 'detail-priority', 'detail-next-action', 'detail-next-action-date', 'detail-next-action-owner', 'detail-nationality', 'detail-email1', 'detail-email2', 'detail-phone', 'detail-interest-type', 'detail-typology'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.disabled = disabled;
   });
@@ -2155,9 +2185,16 @@ function beginLeadDetailEdit() {
   detailDraft = {
     leadName: selectedDetailLead,
     stage: document.getElementById('detail-stage').value,
+    priority: document.getElementById('detail-priority').value,
     nextAction: document.getElementById('detail-next-action').value,
     nextActionDate: document.getElementById('detail-next-action-date').value,
     nextActionOwner: document.getElementById('detail-next-action-owner').value,
+    nationality: document.getElementById('detail-nationality').value,
+    email1: document.getElementById('detail-email1').value,
+    email2: document.getElementById('detail-email2').value,
+    phone: document.getElementById('detail-phone').value,
+    interestType: document.getElementById('detail-interest-type').value,
+    typology: document.getElementById('detail-typology').value,
     unitSelected: selectedDetailUnit || ''
   };
   setLeadDetailEditing(true);
@@ -2172,9 +2209,16 @@ function cancelLeadDetailEdit() {
   if (detailDraft) {
     document.getElementById('detail-lead-name-input').value = detailDraft.leadName || selectedDetailLead || '';
     document.getElementById('detail-stage').value = detailDraft.stage || '';
+    document.getElementById('detail-priority').value = detailDraft.priority || '';
     document.getElementById('detail-next-action').value = detailDraft.nextAction || '';
     document.getElementById('detail-next-action-date').value = detailDraft.nextActionDate || '';
     document.getElementById('detail-next-action-owner').value = detailDraft.nextActionOwner || currentSubmitter || '';
+    document.getElementById('detail-nationality').value = detailDraft.nationality || '';
+    document.getElementById('detail-email1').value = detailDraft.email1 || '';
+    document.getElementById('detail-email2').value = detailDraft.email2 || '';
+    document.getElementById('detail-phone').value = detailDraft.phone || '';
+    document.getElementById('detail-interest-type').value = detailDraft.interestType || '';
+    document.getElementById('detail-typology').value = detailDraft.typology || '';
     selectedDetailUnit = detailDraft.unitSelected || '';
     updateUnitSelectionDisplays();
   } else {
@@ -2306,17 +2350,41 @@ function openLeadDetailFromInventory(leadName) {
   showScreen('screen-lead-detail');
 }
 
+function renderDetailPriorityOptions(selectedPriority) {
+  var select = document.getElementById('detail-priority');
+  if (!select) return;
+  var priorityMap = {};
+  allPriorities.forEach(function(priority) {
+    priorityMap[priority] = true;
+  });
+  allPipelineRows.forEach(function(row) {
+    if (row.priority) priorityMap[row.priority] = true;
+  });
+  var priorities = Object.keys(priorityMap).sort();
+  select.innerHTML = '';
+  priorities.forEach(function(priority) {
+    var opt = document.createElement('option');
+    opt.value = priority;
+    opt.textContent = priority;
+    select.appendChild(opt);
+  });
+  select.value = selectedPriority || priorities[0] || '';
+}
+
 function renderDetailStageOptions(selectedStage) {
   var select = document.getElementById('detail-stage');
   if (!select) return;
   var stageMap = {};
+  detailStageDefaults.forEach(function(stage) {
+    stageMap[stage] = true;
+  });
   allPipelineRows.forEach(function(row) {
     if (row.stage) stageMap[row.stage] = true;
   });
-  var stages = Object.keys(stageMap).sort();
-  if (!stages.length) {
-    stages = ['1 - Identified', '2 - Contacted', '3 - Engaged', '4 - Visit Scheduled', '5 - Qualifying', '6 - Reserved', '7 - Under Contract', '8 - Closed'];
-  }
+  var stages = detailStageDefaults.slice();
+  Object.keys(stageMap).sort().forEach(function(stage) {
+    if (stages.indexOf(stage) === -1) stages.push(stage);
+  });
   select.innerHTML = '';
   stages.forEach(function(stage) {
     var opt = document.createElement('option');
@@ -2478,23 +2546,38 @@ function renderLeadDetail() {
   var cardShell = document.getElementById('detail-card-shell');
   var detailHeaderEl = document.getElementById('detail-lead-header');
   var stageEl = document.getElementById('detail-stage');
+  var priorityEl = document.getElementById('detail-priority');
   var unitEl = document.getElementById('detail-unit');
   var nextActionEl = document.getElementById('detail-next-action');
   var nextActionDateEl = document.getElementById('detail-next-action-date');
   var nextActionOwnerEl = document.getElementById('detail-next-action-owner');
+  var nationalityEl = document.getElementById('detail-nationality');
+  var email1El = document.getElementById('detail-email1');
+  var email2El = document.getElementById('detail-email2');
+  var phoneEl = document.getElementById('detail-phone');
+  var interestTypeEl = document.getElementById('detail-interest-type');
+  var typologyEl = document.getElementById('detail-typology');
   var lastContactEl = document.getElementById('detail-last-contact');
   var contactLogEl = document.getElementById('contact-log-list');
   var detailSearchEl = document.getElementById('detail-lead-search');
   var detailTitleEl = document.getElementById('detail-lead-title');
   var detailNameInputEl = document.getElementById('detail-lead-name-input');
-  if (!stageEl || !unitEl || !nextActionEl || !nextActionDateEl || !nextActionOwnerEl || !lastContactEl || !contactLogEl) return;
+  if (!stageEl || !priorityEl || !unitEl || !nextActionEl || !nextActionDateEl || !nextActionOwnerEl || !nationalityEl || !email1El || !email2El || !phoneEl || !interestTypeEl || !typologyEl || !lastContactEl || !contactLogEl) return;
 
   if (!row) {
     if (cardShell) cardShell.classList.add('hidden');
     renderDetailStageOptions('');
+    renderDetailPriorityOptions('');
+    priorityEl.value = '';
     nextActionEl.value = '';
     nextActionDateEl.value = '';
     nextActionOwnerEl.value = currentSubmitter || '';
+    nationalityEl.value = '';
+    email1El.value = '';
+    email2El.value = '';
+    phoneEl.value = '';
+    interestTypeEl.value = '';
+    typologyEl.value = '';
     selectedDetailUnit = '';
     updateUnitSelectionDisplays();
     lastContactEl.textContent = '-';
@@ -2521,9 +2604,17 @@ function renderLeadDetail() {
   }
   if (detailNameInputEl) detailNameInputEl.value = row.leadName || selectedDetailLead || '';
   renderDetailStageOptions(row.stage || '');
+  renderDetailPriorityOptions(row.priority || '');
+  priorityEl.value = row.priority || '';
   nextActionEl.value = row.nextAction || '';
   nextActionDateEl.value = formatDateForInput(row.nextActionDate);
   nextActionOwnerEl.value = row.nextActionOwner || currentSubmitter || '';
+  nationalityEl.value = row.nationality || '';
+  email1El.value = row.email1 || '';
+  email2El.value = row.email2 || '';
+  phoneEl.value = row.phone || '';
+  interestTypeEl.value = row.interestType || '';
+  typologyEl.value = row.typology || '';
   updateUnitSelectionDisplays();
   lastContactEl.textContent = row.lastContactSummary || row.lastContact || '-';
   updateDetailLeadList('');
@@ -2596,9 +2687,16 @@ function saveLeadDetail() {
     leadName: selectedDetailLead,
     updatedLeadName: updatedLeadName,
     stage: document.getElementById('detail-stage').value,
+    priority: document.getElementById('detail-priority').value,
     nextAction: document.getElementById('detail-next-action').value.trim(),
     nextActionDate: document.getElementById('detail-next-action-date').value,
     nextActionOwner: document.getElementById('detail-next-action-owner').value,
+    nationality: document.getElementById('detail-nationality').value.trim(),
+    email1: document.getElementById('detail-email1').value.trim(),
+    email2: document.getElementById('detail-email2').value.trim(),
+    phone: document.getElementById('detail-phone').value.trim(),
+    interestType: document.getElementById('detail-interest-type').value.trim(),
+    typology: document.getElementById('detail-typology').value.trim(),
     unitSelected: selectedDetailUnit || ''
   };
 
