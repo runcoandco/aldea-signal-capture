@@ -1916,6 +1916,14 @@ function selectLead(name) {
   updateUnitSelectionDisplays();
 }
 
+function syncSelectedUnitsForLead(name) {
+  var row = findLeadRow(name);
+  var unit = row && row.unitSelected ? row.unitSelected : '';
+  if (selectedLead === name) selectedUnit = unit;
+  if (selectedDetailLead === name) selectedDetailUnit = unit;
+  updateUnitSelectionDisplays();
+}
+
 function logOverdueLead(name) {
   resetForm();
   selectLead(name);
@@ -2249,8 +2257,14 @@ function clearAssignedUnit(context) {
   if (context === 'detail') {
     if (!detailEditMode) return;
     selectedDetailUnit = '';
+    if (selectedDetailLead && selectedDetailLead === selectedLead) {
+      selectedUnit = '';
+    }
   } else {
     selectedUnit = '';
+    if (selectedLead && selectedLead === selectedDetailLead) {
+      selectedDetailUnit = '';
+    }
   }
   updateUnitSelectionDisplays();
   if (context === 'detail') {
@@ -2267,8 +2281,14 @@ function cancelInventorySelection() {
 function assignUnitFromInventory(unitId) {
   if (assignmentContext === 'detail') {
     selectedDetailUnit = unitId || '';
+    if (selectedDetailLead && selectedDetailLead === selectedLead) {
+      selectedUnit = selectedDetailUnit;
+    }
   } else {
     selectedUnit = unitId || '';
+    if (selectedLead && selectedLead === selectedDetailLead) {
+      selectedDetailUnit = selectedUnit;
+    }
   }
   updateUnitSelectionDisplays();
   var destination = assignmentContext === 'detail' ? 'screen-lead-detail' : 'screen-form';
@@ -2705,12 +2725,19 @@ function saveLeadDetail() {
     if (!result || !result.success) {
       throw new Error(result && result.error ? result.error : 'Could not save lead detail.');
     }
-    selectedDetailLead = result.lead || updatedLeadName;
-    detailDraft = null;
-    setLeadDetailEditing(false);
-    showToast('Lead details saved');
+    var savedLeadName = result.lead || updatedLeadName;
+    selectedDetailLead = savedLeadName;
+    if (selectedLead === payload.leadName || selectedLead === updatedLeadName) {
+      selectedLead = savedLeadName;
+    }
     dataLoaded = false;
-    return fetchDataAsync(true);
+    return fetchDataAsync(true).then(function() {
+      syncSelectedUnitsForLead(savedLeadName);
+      detailDraft = null;
+      setLeadDetailEditing(false);
+      renderLeadDetail();
+      showToast('Lead details saved');
+    });
   })
   .catch(function(err) {
     alert(err.message || 'Could not save lead detail.');
@@ -2893,13 +2920,17 @@ function submitSignal() {
     if (!result || !result.success) {
       throw new Error(result && result.error ? result.error : 'Failed to save. Try again.');
     }
-    document.getElementById('form-loading').classList.remove('visible');
-    document.getElementById('submit-btn').disabled = false;
-    document.getElementById('confirm-detail').innerHTML =
-      '<strong>' + selectedLead + '</strong><br>updated in Pipeline' +
-      (result.warning ? '<br><span style="color:var(--warning);">' + result.warning + '</span>' : '');
+    var savedLeadName = selectedLead;
     dataLoaded = false;
-    showScreen('screen-confirm');
+    return fetchDataAsync(true).then(function() {
+      syncSelectedUnitsForLead(savedLeadName);
+      document.getElementById('form-loading').classList.remove('visible');
+      document.getElementById('submit-btn').disabled = false;
+      document.getElementById('confirm-detail').innerHTML =
+        '<strong>' + savedLeadName + '</strong><br>updated in Pipeline' +
+        (result.warning ? '<br><span style="color:var(--warning);">' + result.warning + '</span>' : '');
+      showScreen('screen-confirm');
+    });
   })
   .catch(function(err) {
     document.getElementById('form-loading').classList.remove('visible');
