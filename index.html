@@ -2072,14 +2072,16 @@ function buildPipelineSnapshot() {
   allPipelineRows.forEach(function(row) {
     var stage = normalizeStageLabel(row.stage);
     if (!stage || !totalsByStage[stage]) return;
+
+    totalsByStage[stage].leads += 1;
+
     var unitPrice = parseNumericValue(row.unitPrice);
     if (unitPrice === null) unitPrice = parseNumericValue(row.listPrice);
-    if (unitPrice === null) return;
+    if (unitPrice === null) unitPrice = 0;
 
     var weight = resolveStageWeight(row);
     var weightedValue = unitPrice * weight;
 
-    totalsByStage[stage].leads += 1;
     totalsByStage[stage].value += unitPrice;
     totalsByStage[stage].weighted += weightedValue;
     weightedPipeline += weightedValue;
