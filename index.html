@@ -327,6 +327,101 @@
     color: var(--text-mid);
   }
 
+  .snapshot-card {
+    display: none;
+    margin: 0 0 18px;
+  }
+
+  .snapshot-card.visible {
+    display: block;
+  }
+
+  .snapshot-meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .snapshot-metric {
+    background: var(--surface-warm);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 11px 12px;
+  }
+
+  .snapshot-metric-label {
+    display: block;
+    font-size: 10px;
+    line-height: 1.2;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 4px;
+  }
+
+  .snapshot-metric-value {
+    display: block;
+    font-family: var(--font-accent);
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.15;
+  }
+
+  .snapshot-table {
+    display: grid;
+    gap: 6px;
+  }
+
+  .snapshot-table-head,
+  .snapshot-table-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 64px minmax(92px, 1fr) minmax(92px, 1fr);
+    gap: 8px;
+    align-items: center;
+  }
+
+  .snapshot-table-head {
+    padding: 0 2px;
+    font-size: 10px;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+  }
+
+  .snapshot-table-row {
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text-mid);
+  }
+
+  .snapshot-stage {
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .snapshot-leads {
+    text-align: center;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .snapshot-amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .snapshot-table-row.is-total {
+    background: var(--accent-light);
+    border-color: rgba(139, 108, 89, 0.22);
+    font-weight: 600;
+  }
+
   .home-footer {
     margin: 18px 0 4px;
   }
@@ -1186,6 +1281,16 @@
       grid-template-columns: 1fr;
     }
 
+    .snapshot-meta {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .snapshot-table-head,
+    .snapshot-table-row {
+      grid-template-columns: minmax(0, 1.4fr) 48px minmax(72px, 1fr) minmax(72px, 1fr);
+      gap: 6px;
+    }
+
     .overdue-row {
       padding: 14px;
     }
@@ -1254,6 +1359,12 @@
       <span class="home-card-title">Lead Detail</span>
       <span class="home-card-copy">Stage, next action, last contact, and log.</span>
     </button>
+  </div>
+
+  <div class="card snapshot-card" id="home-snapshot-card">
+    <div class="section-title">CRM Snapshot</div>
+    <div class="snapshot-meta" id="home-snapshot-metrics"></div>
+    <div class="snapshot-table" id="home-snapshot-table"></div>
   </div>
 
   <div class="card">
@@ -1617,6 +1728,7 @@ var allComingActions = [];
 var allSources = ['Inner Community','Founder Network','Event / Experience','Partner Lead','Referral','Inbound','Other'];
 var allPriorities = ['1 - Urgent','2 - High','3 - Mid','4 - Low'];
 var detailStageDefaults = ['1 - Identified','2 - Contacted','3 - Presented','4 - Experiencing','5 - Qualifying','6 - Reserved','7 - Under Contract','8 - Closed','Lost'];
+var snapshotStageOrder = ['1 - Identified','2 - Contacted','3 - Presented','4 - Experiencing','5 - Qualifying','6 - Reserved','7 - Under Contract','8 - Closed','Lost'];
 var selectedLead = null;
 var selectedUnit = '';
 var selectedDetailLead = null;
@@ -1822,6 +1934,120 @@ function renderHomeSummary() {
   if (overdueEl) overdueEl.textContent = overdueCount;
   if (upcomingEl) upcomingEl.textContent = upcomingCount;
   if (openEl) openEl.textContent = openCount;
+  renderHomeSnapshot();
+}
+
+function renderHomeSnapshot() {
+  var card = document.getElementById('home-snapshot-card');
+  var metrics = document.getElementById('home-snapshot-metrics');
+  var table = document.getElementById('home-snapshot-table');
+  if (!card || !metrics || !table) return;
+
+  if (!canViewPipelineSnapshot()) {
+    card.classList.remove('visible');
+    metrics.innerHTML = '';
+    table.innerHTML = '';
+    return;
+  }
+
+  var snapshot = buildPipelineSnapshot();
+  card.classList.add('visible');
+  metrics.innerHTML = [
+    renderSnapshotMetric('Total Portfolio', formatCurrencyRounded(snapshot.totalPortfolio)),
+    renderSnapshotMetric('Weighted Pipeline', formatCurrencyRounded(snapshot.weightedPipeline)),
+    renderSnapshotMetric('Committed', formatCurrencyRounded(snapshot.committed)),
+    renderSnapshotMetric('Remaining', formatCurrencyRounded(snapshot.remaining))
+  ].join('');
+
+  table.innerHTML =
+    '<div class="snapshot-table-head">' +
+      '<span>Stage</span>' +
+      '<span>Leads</span>' +
+      '<span>Value</span>' +
+      '<span>Weighted</span>' +
+    '</div>' +
+    snapshot.rows.map(function(row) {
+      return (
+        '<div class="snapshot-table-row' + (row.isTotal ? ' is-total' : '') + '">' +
+          '<div class="snapshot-stage">' + escapeHtml(row.stage) + '</div>' +
+          '<div class="snapshot-leads">' + row.leads + '</div>' +
+          '<div class="snapshot-amount">' + formatCurrencyRounded(row.value) + '</div>' +
+          '<div class="snapshot-amount">' + formatCurrencyRounded(row.weighted) + '</div>' +
+        '</div>'
+      );
+    }).join('');
+}
+
+function canViewPipelineSnapshot() {
+  return normalizeOwnerName(currentSubmitter).split(/\s+/)[0] === 'joaquin';
+}
+
+function buildPipelineSnapshot() {
+  var totalsByStage = {};
+  var totalPortfolio = 0;
+  var weightedPipeline = 0;
+  var committed = 0;
+
+  snapshotStageOrder.forEach(function(stage) {
+    totalsByStage[stage] = {
+      stage: stage,
+      leads: 0,
+      value: 0,
+      weighted: 0
+    };
+  });
+
+  allUnits.forEach(function(unit) {
+    totalPortfolio += parseNumericValue(unit.listPrice) || 0;
+  });
+
+  allPipelineRows.forEach(function(row) {
+    var stage = normalizeStageLabel(row.stage);
+    if (!stage || !totalsByStage[stage]) return;
+    var unitPrice = parseNumericValue(row.unitPrice);
+    if (unitPrice === null) unitPrice = parseNumericValue(row.listPrice);
+    if (unitPrice === null) return;
+
+    var weight = resolveStageWeight(row);
+    var weightedValue = unitPrice * weight;
+
+    totalsByStage[stage].leads += 1;
+    totalsByStage[stage].value += unitPrice;
+    totalsByStage[stage].weighted += weightedValue;
+    weightedPipeline += weightedValue;
+    if (isCommittedStage(stage)) committed += unitPrice;
+  });
+
+  var rows = snapshotStageOrder.map(function(stage) {
+    return totalsByStage[stage];
+  }).filter(function(row) {
+    return row.leads || row.value || row.weighted || row.stage === 'Lost';
+  });
+
+  rows.push({
+    stage: 'Total',
+    leads: rows.reduce(function(sum, row) { return sum + row.leads; }, 0),
+    value: rows.reduce(function(sum, row) { return sum + row.value; }, 0),
+    weighted: rows.reduce(function(sum, row) { return sum + row.weighted; }, 0),
+    isTotal: true
+  });
+
+  return {
+    totalPortfolio: totalPortfolio,
+    weightedPipeline: weightedPipeline,
+    committed: committed,
+    remaining: totalPortfolio - committed,
+    rows: rows
+  };
+}
+
+function renderSnapshotMetric(label, value) {
+  return (
+    '<div class="snapshot-metric">' +
+      '<span class="snapshot-metric-label">' + escapeHtml(label) + '</span>' +
+      '<span class="snapshot-metric-value">' + escapeHtml(value) + '</span>' +
+    '</div>'
+  );
 }
 
 // ============================================================
@@ -2356,6 +2582,71 @@ function formatCurrencyValue(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
+}
+
+function formatCurrencyRounded(value) {
+  var parsed = parseNumericValue(value);
+  if (parsed === null) return '-';
+  return parsed.toLocaleString('pt-PT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  });
+}
+
+function resolveStageWeight(row) {
+  var probability = parseProbabilityValue(row && row.probability);
+  if (probability !== null) return probability;
+
+  var stage = normalizeStageLabel(row && row.stage);
+  switch (stage) {
+    case '1 - Identified': return 0.05;
+    case '2 - Contacted': return 0.10;
+    case '3 - Presented': return 0.20;
+    case '4 - Experiencing': return 0.35;
+    case '5 - Qualifying': return 0.55;
+    case '6 - Reserved': return 0.75;
+    case '7 - Under Contract': return 1;
+    case '8 - Closed': return 1;
+    case 'Lost': return 0;
+    default: return 0;
+  }
+}
+
+function parseProbabilityValue(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') {
+    if (isNaN(value)) return null;
+    return value > 1 ? value / 100 : value;
+  }
+  var raw = String(value).trim().replace('%', '');
+  if (!raw) return null;
+  var parsed = parseNumericValue(raw);
+  if (parsed === null) return null;
+  return parsed > 1 ? parsed / 100 : parsed;
+}
+
+function normalizeStageLabel(value) {
+  var normalized = String(value || '').trim();
+  if (!normalized) return '';
+  var exact = snapshotStageOrder.find(function(stage) {
+    return stage.toLowerCase() === normalized.toLowerCase();
+  });
+  return exact || normalized;
+}
+
+function isCommittedStage(stage) {
+  return stage === '6 - Reserved' || stage === '7 - Under Contract' || stage === '8 - Closed';
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function openLeadDetailFromInventory(leadName) {
