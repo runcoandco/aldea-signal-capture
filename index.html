@@ -348,6 +348,10 @@
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     padding: 11px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 92px;
   }
 
   .snapshot-metric-label {
@@ -358,6 +362,7 @@
     text-transform: uppercase;
     color: var(--text-light);
     margin-bottom: 4px;
+    min-height: 2.4em;
   }
 
   .snapshot-metric-value {
@@ -367,6 +372,9 @@
     font-weight: 700;
     color: var(--accent);
     line-height: 1.15;
+    margin-top: auto;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   .snapshot-table {
@@ -398,6 +406,15 @@
     padding: 10px 12px;
     font-size: 13px;
     color: var(--text-mid);
+  }
+
+  .snapshot-table-row.is-link {
+    cursor: pointer;
+  }
+
+  .snapshot-table-row.is-link:active {
+    background: var(--accent-light);
+    border-color: rgba(41, 69, 134, 0.2);
   }
 
   .snapshot-stage {
@@ -879,6 +896,37 @@
     display: none;
   }
 
+  .detail-filter-chip {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0 0;
+    padding: 11px 14px;
+    background: var(--accent-light);
+    border: 0.5px solid rgba(41, 69, 134, 0.14);
+    border-radius: var(--radius);
+  }
+
+  .detail-filter-chip.visible {
+    display: flex;
+  }
+
+  .detail-filter-copy {
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  .detail-filter-copy strong {
+    font-weight: 600;
+  }
+
+  .detail-filter-chip button {
+    width: auto;
+    min-height: auto;
+    padding: 8px 10px;
+  }
+
   .detail-lead-option {
     appearance: none;
     width: 100%;
@@ -896,6 +944,13 @@
   .detail-lead-option:active {
     background: var(--accent-light);
     border-color: rgba(41, 69, 134, 0.12);
+  }
+
+  .detail-lead-option-meta {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-mid);
   }
 
   .detail-grid {
@@ -1605,6 +1660,10 @@
       <input type="text" id="detail-lead-search" placeholder="Search leads..." autocomplete="off" oninput="filterDetailLeads()" onfocus="showDetailResults()">
       <div class="search-results" id="detail-search-results"></div>
     </div>
+    <div class="detail-filter-chip" id="detail-stage-filter-chip">
+      <div class="detail-filter-copy" id="detail-stage-filter-copy"></div>
+      <button class="btn btn-secondary" type="button" onclick="clearDetailStageFilter()">Clear Filter</button>
+    </div>
   </div>
 
   <div class="detail-lead-header" id="detail-lead-header">
@@ -1733,6 +1792,7 @@ var selectedLead = null;
 var selectedUnit = '';
 var selectedDetailLead = null;
 var selectedDetailUnit = '';
+var selectedDetailStageFilter = '';
 var detailEditMode = false;
 var detailDraft = null;
 var assignmentContext = null;
@@ -1778,6 +1838,7 @@ function openInventory() {
 
 function openLeadDetail() {
   fetchData(true);
+  selectedDetailStageFilter = '';
   resetLeadDetailSelection();
   var detailSearch = document.getElementById('detail-lead-search');
   var detailResults = document.getElementById('detail-search-results');
@@ -1797,6 +1858,11 @@ function resetLeadDetailSelection() {
   if (detailSearch) detailSearch.value = '';
   if (detailResults) detailResults.classList.remove('visible');
   renderLeadDetail();
+}
+
+function clearDetailStageFilter() {
+  selectedDetailStageFilter = '';
+  resetLeadDetailSelection();
 }
 
 function goHome() {
@@ -1968,7 +2034,9 @@ function renderHomeSnapshot() {
     '</div>' +
     snapshot.rows.map(function(row) {
       return (
-        '<div class="snapshot-table-row' + (row.isTotal ? ' is-total' : '') + '">' +
+        '<div class="snapshot-table-row' + (row.isTotal ? ' is-total' : ' is-link') + '"' +
+          (row.isTotal ? '' : ' onclick="openLeadDetailForStage(\'' + escapeJsString(row.stage) + '\')"') +
+        '>' +
           '<div class="snapshot-stage">' + escapeHtml(row.stage) + '</div>' +
           '<div class="snapshot-leads">' + row.leads + '</div>' +
           '<div class="snapshot-amount">' + formatCurrencyRounded(row.value) + '</div>' +
@@ -2050,6 +2118,20 @@ function renderSnapshotMetric(label, value) {
   );
 }
 
+function openLeadDetailForStage(stage) {
+  selectedDetailStageFilter = normalizeStageLabel(stage);
+  selectedDetailLead = null;
+  selectedDetailUnit = '';
+  detailEditMode = false;
+  detailDraft = null;
+  var detailSearch = document.getElementById('detail-lead-search');
+  var detailResults = document.getElementById('detail-search-results');
+  if (detailSearch) detailSearch.value = '';
+  if (detailResults) detailResults.classList.remove('visible');
+  renderLeadDetail();
+  showScreen('screen-lead-detail');
+}
+
 // ============================================================
 // Screen 3: Lead search
 // ============================================================
@@ -2094,8 +2176,37 @@ function updateDetailLeadList(query) {
   }
 
   var normalizedQuery = String(query || '').toLowerCase().trim();
-  var matches = allLeads.filter(function(name) {
-    return !normalizedQuery || name.toLowerCase().indexOf(normalizedQuery) !== -1;
+  var stageFilter = normalizeStageLabel(selectedDetailStageFilter);
+  var leadEntries = [];
+
+  allPipelineRows.forEach(function(row) {
+    if (!row || !row.leadName) return;
+    if (stageFilter && normalizeStageLabel(row.stage) !== stageFilter) return;
+    leadEntries.push({
+      leadName: row.leadName,
+      stage: row.stage || ''
+    });
+  });
+
+  if (!stageFilter) {
+    allLeads.forEach(function(name) {
+      if (!name || findLeadRow(name)) return;
+      leadEntries.push({
+        leadName: name,
+        stage: ''
+      });
+    });
+  }
+
+  var matches = leadEntries.filter(function(row) {
+    return !normalizedQuery || String(row.leadName).toLowerCase().indexOf(normalizedQuery) !== -1;
+  }).sort(function(a, b) {
+    var nameCompare = String(a.leadName || '').localeCompare(String(b.leadName || ''));
+    if (nameCompare !== 0) return nameCompare;
+    return String(a.stage || '').localeCompare(String(b.stage || ''));
+  }).filter(function(row, index, arr) {
+    if (!index) return true;
+    return normalizeOwnerName(row.leadName) !== normalizeOwnerName(arr[index - 1].leadName);
   });
 
   list.innerHTML = '';
@@ -2105,12 +2216,14 @@ function updateDetailLeadList(query) {
     return;
   }
   list.classList.remove('hidden');
-  matches.forEach(function(name) {
+  matches.forEach(function(row) {
     var button = document.createElement('button');
     button.type = 'button';
     button.className = 'detail-lead-option';
-    button.textContent = name;
-    button.onclick = function() { selectDetailLead(name); };
+    button.innerHTML =
+      '<span>' + escapeHtml(row.leadName || '') + '</span>' +
+      '<span class="detail-lead-option-meta">' + escapeHtml(normalizeStageLabel(row.stage) || 'No stage') + '</span>';
+    button.onclick = function() { selectDetailLead(row.leadName); };
     list.appendChild(button);
   });
 }
@@ -2649,6 +2762,12 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeJsString(value) {
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'");
+}
+
 function openLeadDetailFromInventory(leadName) {
   if (!leadName || leadName === '-') return;
   selectedDetailLead = leadName;
@@ -2856,6 +2975,8 @@ function renderLeadDetail() {
   var row = findLeadRow(selectedDetailLead);
   var cardShell = document.getElementById('detail-card-shell');
   var detailHeaderEl = document.getElementById('detail-lead-header');
+  var filterChipEl = document.getElementById('detail-stage-filter-chip');
+  var filterCopyEl = document.getElementById('detail-stage-filter-copy');
   var stageEl = document.getElementById('detail-stage');
   var priorityEl = document.getElementById('detail-priority');
   var unitEl = document.getElementById('detail-unit');
@@ -2874,6 +2995,16 @@ function renderLeadDetail() {
   var detailTitleEl = document.getElementById('detail-lead-title');
   var detailNameInputEl = document.getElementById('detail-lead-name-input');
   if (!stageEl || !priorityEl || !unitEl || !nextActionEl || !nextActionDateEl || !nextActionOwnerEl || !nationalityEl || !email1El || !email2El || !phoneEl || !interestTypeEl || !typologyEl || !lastContactEl || !contactLogEl) return;
+
+  if (filterChipEl && filterCopyEl) {
+    if (selectedDetailStageFilter) {
+      filterChipEl.classList.add('visible');
+      filterCopyEl.innerHTML = 'Showing leads in <strong>' + escapeHtml(selectedDetailStageFilter) + '</strong>.';
+    } else {
+      filterChipEl.classList.remove('visible');
+      filterCopyEl.textContent = '';
+    }
+  }
 
   if (!row) {
     if (cardShell) cardShell.classList.add('hidden');
