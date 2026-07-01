@@ -1859,6 +1859,21 @@ function updateSubmitterDisplays() {
   });
 }
 
+function syncHeaderLogos() {
+  var masterLogo = document.querySelector('.splash-logo');
+  if (!masterLogo || !masterLogo.src) return;
+
+  document.querySelectorAll('.inline-logo').forEach(function(img) {
+    img.src = masterLogo.src;
+    img.style.display = 'block';
+
+    var fallback = img.nextElementSibling;
+    if (fallback && fallback.classList.contains('logo-fallback')) {
+      fallback.style.display = 'none';
+    }
+  });
+}
+
 function startLog() {
   fetchData(true);
   resetForm();
@@ -3439,6 +3454,7 @@ function logAnother() {
   var params = new URLSearchParams(window.location.search);
   var launchedOwner = params.get('owner');
   currentRole = params.get('role') === 'admin' ? 'admin' : 'user';
+  syncHeaderLogos();
   if (!launchedOwner) {
     launchFromWorkspace();
     return;
