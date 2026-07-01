@@ -169,6 +169,16 @@
 
   .icon-btn:active { background: var(--accent-light); }
 
+  .icon-btn-home {
+    background: var(--accent-light);
+    border-color: rgba(41, 69, 134, 0.16);
+    color: var(--accent);
+  }
+
+  .icon-btn-home:active {
+    background: rgba(41, 69, 134, 0.16);
+  }
+
   .card {
     background: var(--surface);
     border: 0.5px solid var(--border);
@@ -1261,6 +1271,11 @@
     height: 40px;
   }
 
+  .icon-btn-home {
+    background: var(--accent-light);
+    box-shadow: inset 0 0 0 1px rgba(41, 69, 134, 0.06);
+  }
+
   .submitter-chip {
     color: var(--accent);
     background: var(--accent-light);
@@ -1478,7 +1493,7 @@
       <div class="header-meta">
         <button class="submitter-chip" id="form-submitter-display" onclick="changeIdentity()"></button>
         <div class="header-actions">
-      <button class="icon-btn" onclick="goHome()" aria-label="Home">
+      <button class="icon-btn icon-btn-home" onclick="goHome()" aria-label="Home">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
       </button>
       <button class="icon-btn" onclick="goToWorkspace()" aria-label="Workspace Home" title="Workspace Home">
@@ -1614,7 +1629,7 @@
       <div class="header-meta">
         <button class="submitter-chip" id="inventory-submitter-display" onclick="changeIdentity()"></button>
         <div class="header-actions">
-      <button class="icon-btn" onclick="goHome()" aria-label="Home">
+      <button class="icon-btn icon-btn-home" onclick="goHome()" aria-label="Home">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
       </button>
       <button class="icon-btn" onclick="goToWorkspace()" aria-label="Workspace Home" title="Workspace Home">
@@ -1660,7 +1675,7 @@
       <div class="header-meta">
         <button class="submitter-chip" id="detail-submitter-display" onclick="changeIdentity()"></button>
         <div class="header-actions">
-      <button class="icon-btn" onclick="goHome()" aria-label="Home">
+      <button class="icon-btn icon-btn-home" onclick="goHome()" aria-label="Home">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
       </button>
       <button class="icon-btn" onclick="goToWorkspace()" aria-label="Workspace Home" title="Workspace Home">
