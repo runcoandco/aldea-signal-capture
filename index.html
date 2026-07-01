@@ -82,8 +82,8 @@
   .screen-header .brand { margin-bottom: 8px; }
 
   .splash-logo {
-    width: 250px;
-    height: 250px;
+    width: 220px;
+    height: auto;
     object-fit: contain;
     margin-bottom: 18px;
   }
@@ -1815,6 +1815,7 @@
 // ============================================================
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzSJk_4tzxMFXJeJ5LZUxgbcGOcYfdHFb6CQCJvhfaP164KZTXcDVyU54UaIQii8BKr5w/exec';
 var SHELL_URL = window.ALDEA_SHELL_URL || (location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://aldea-task-manager.vercel.app');
+var INLINE_LOGO_URL = 'assets/aldea-inline.png';
 
 // ============================================================
 // State
@@ -1860,11 +1861,8 @@ function updateSubmitterDisplays() {
 }
 
 function syncHeaderLogos() {
-  var masterLogo = document.querySelector('.splash-logo');
-  if (!masterLogo || !masterLogo.src) return;
-
-  document.querySelectorAll('.inline-logo').forEach(function(img) {
-    img.src = masterLogo.src;
+  document.querySelectorAll('.splash-logo, .inline-logo').forEach(function(img) {
+    img.src = INLINE_LOGO_URL;
     img.style.display = 'block';
 
     var fallback = img.nextElementSibling;

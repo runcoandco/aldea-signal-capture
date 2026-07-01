@@ -19,13 +19,15 @@ Task Manager syncing must not also run inside `SignalCapture.gs`.
 
 ## Use This As The Working Area
 
-- `aldea-signal/` is the active app copy.
-- Edit the files in that folder first when making product changes.
-- Keep the other folders as historical references unless you are intentionally creating a new snapshot.
+- `index.html` at the root of `ALDEA-Signal/` is the live browser app file.
+- `assets/aldea-inline.png` is the canonical inline logo for the Signal app.
+- `aldea-signal/`, `deployments/`, and `archives/` are reference or historical copies unless a cleanup pass explicitly promotes or removes them.
 
 ## Organized Folders
 
-- `aldea-signal/` - current working version of the Signal tracker app
+- `index.html` - live Signal app file
+- `assets/` - live Signal brand assets
+- `aldea-signal/` - older working copy kept for reference
 - `deployments/` - deployed snapshots and release copies
 - `archives/` - packaged exports and zip bundles
 - root-level docs and Apps Script files - supporting material for the Signal project
