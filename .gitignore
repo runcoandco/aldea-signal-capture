@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.vercel/
+*.pem
+*.key
+*credentials*.json
+*service-account*.json
+*service_account*.json

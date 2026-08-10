@@ -7,13 +7,17 @@ This folder now separates the editable app from deployment snapshots and package
 The production Signal site uses:
 
 - `index.html` for the browser app.
-- `api/signal.js` as the same-origin server endpoint.
+- `api/session.js` to exchange a short-lived, signed launch for an HTTP-only session.
+- `api/signal.js` as the authenticated same-origin server endpoint.
 - `ALDEA_Signal_Capture_AppScript.gs` for CRM-only Apps Script logic.
 
 Set these environment variables in the `aldea-signal-capture` Vercel project:
 
 - `SIGNAL_SCRIPT_URL`: CRM Apps Script Web App `/exec` URL.
 - `SIGNAL_TASK_SYNC_SECRET`: same value used by the Task Manager Vercel project.
+- `TASK_MANAGER_SYNC_URL`: optional override for the Task Manager sync endpoint.
+
+Users must enter through the authenticated ALDEA workspace. Raw `owner` and `role` URL parameters are not accepted. The browser no longer calls Apps Script directly.
 
 Task Manager syncing must not also run inside `SignalCapture.gs`.
 
