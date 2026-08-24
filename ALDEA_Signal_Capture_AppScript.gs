@@ -36,6 +36,7 @@ var CONFIG = {
   COL_PHONE: 11,           // K: Phone
   COL_INTEREST_TYPE: 12,   // L: Interest Type
   COL_TYPOLOGY: 13,        // M: Typology
+  COL_PROBABILITY: 15,     // O: Probability, derived from Stage
   COL_LAST_CONTACT: 18,    // R: Last Contact Summary
   COL_NEXT_ACTION: 19,     // S: Next Action
   COL_NEXT_ACTION_DATE: 20, // T: Next Action Date
@@ -100,6 +101,13 @@ function doGet(e) {
       pipelineRows: leadRows,
       units: unitRows,
       owners: owners,
+      options: {
+        stages: getNamedRangeOptions_(ss, 'CRM_Stages'),
+        priorities: getNamedRangeOptions_(ss, 'CRM_Priority'),
+        nationalities: getNamedRangeOptions_(ss, 'CRM_Nationality'),
+        interestTypes: getNamedRangeOptions_(ss, 'CRM_Interests'),
+        typologies: getNamedRangeOptions_(ss, 'CRM_Unit_Type')
+      },
       overdueActions: overdueActions,
       comingActions: comingActions
     };
@@ -116,6 +124,30 @@ function doGet(e) {
       }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function getNamedRangeOptions_(ss, rangeName) {
+  var range = ss.getRangeByName(rangeName);
+  if (!range) return [];
+  var values = range.getDisplayValues();
+  var seen = {};
+  var options = [];
+  for (var row = 0; row < values.length; row++) {
+    for (var col = 0; col < values[row].length; col++) {
+      var value = String(values[row][col] || '').trim();
+      if (value && !seen[value]) {
+        seen[value] = true;
+        options.push(value);
+      }
+    }
+  }
+  return options;
+}
+
+function ensureProbabilityFormula_(pipeline, rowNumber) {
+  var cell = pipeline.getRange(rowNumber, CONFIG.COL_PROBABILITY);
+  if (cell.getFormula() || cell.getValue() !== '') return;
+  cell.setFormulaR1C1("=IF(RC[-13]=\"\",\"\",VLOOKUP(RC[-11],'0_SETUP'!R17C5:R25C6,2,FALSE))");
 }
 
 function getPipelineRows_(pipeline) {
@@ -677,6 +709,7 @@ function handleCreateLead(data) {
     }
     // Col AA: Stage Entry Date
     pipeline.getRange(newRow, 27).setValue(now);
+    ensureProbabilityFormula_(pipeline, newRow);
 
     return ContentService
       .createTextOutput(JSON.stringify({
@@ -776,6 +809,7 @@ function handleUpdateLeadDetails(data) {
         pipeline.getRange(leadRow, CONFIG.COL_NEXT_ACTION_DATE).setValue('');
       }
     }
+    ensureProbabilityFormula_(pipeline, leadRow);
 
     return ContentService
       .createTextOutput(JSON.stringify({ success: true, lead: updatedLeadName }))
