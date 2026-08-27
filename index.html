@@ -1727,6 +1727,10 @@
         <select id="detail-priority"></select>
       </div>
       <div class="detail-field">
+        <label>Probability</label>
+        <input type="text" id="detail-probability" placeholder="Calculated from stage" disabled>
+      </div>
+      <div class="detail-field">
         <label>Assigned Unit</label>
         <div class="detail-unit-box">
           <div class="detail-unit-copy" id="detail-unit">Select a lead to view details.</div>
@@ -1750,7 +1754,7 @@
       </div>
       <div class="detail-field">
         <label>Nationality</label>
-        <input type="text" id="detail-nationality" placeholder="Nationality">
+        <select id="detail-nationality"></select>
       </div>
       <div class="detail-field">
         <label>Email 1</label>
@@ -1766,11 +1770,11 @@
       </div>
       <div class="detail-field">
         <label>Interest Type</label>
-        <input type="text" id="detail-interest-type" placeholder="Interest type">
+        <select id="detail-interest-type"></select>
       </div>
       <div class="detail-field">
         <label>Typology</label>
-        <input type="text" id="detail-typology" placeholder="Typology">
+        <select id="detail-typology"></select>
       </div>
       <div class="detail-field">
         <label>Last Contact</label>
@@ -1827,6 +1831,9 @@ var allOverdueActions = [];
 var allComingActions = [];
 var allSources = ['Inner Community','Founder Network','Event / Experience','Partner Lead','Referral','Inbound','Other'];
 var allPriorities = ['1 - Urgent','2 - High','3 - Mid','4 - Low'];
+var allNationalities = [];
+var allInterestTypes = [];
+var allTypologies = [];
 var detailStageDefaults = ['1 - Identified','2 - Contacted','3 - Presented','4 - Experiencing','5 - Qualifying','6 - Reserved','7 - Under Contract','8 - Closed','Lost'];
 var snapshotStageOrder = ['1 - Identified','2 - Contacted','3 - Presented','4 - Experiencing','5 - Qualifying','6 - Reserved','7 - Under Contract','8 - Closed','Lost'];
 var selectedLead = null;
@@ -1840,6 +1847,7 @@ var assignmentContext = null;
 var currentSubmitter = null;
 var currentRole = 'user';
 var dataLoaded = false;
+var sessionRedirectStarted = false;
 
 // ============================================================
 // Navigation
@@ -2411,7 +2419,7 @@ function fetchDataAsync(force) {
     }
 
     fetch('/api/signal?fresh=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' })
-      .then(function(r) { return r.json(); })
+      .then(function(response) { return readApiResponse(response, false); })
       .then(function(data) {
         if (!data.success) {
           reject(new Error(data.error || 'Could not load CRM data.'));
@@ -2421,6 +2429,12 @@ function fetchDataAsync(force) {
         allOwners = data.owners || [];
         allPipelineRows = data.pipelineRows || [];
         allUnits = data.units || [];
+        var options = data.options || {};
+        if (options.stages && options.stages.length) detailStageDefaults = options.stages.slice();
+        if (options.priorities && options.priorities.length) allPriorities = options.priorities.slice();
+        allNationalities = options.nationalities || [];
+        allInterestTypes = options.interestTypes || [];
+        allTypologies = options.typologies || [];
         currentSubmitter = resolveSignalOwner(currentSubmitter);
         localStorage.setItem('aldea_submitter', currentSubmitter);
         updateSubmitterDisplays();
@@ -2446,10 +2460,54 @@ function postToScript(payload) {
   return fetch('/api/signal', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
     body: JSON.stringify(payload)
   }).then(function(response) {
-    return response.json();
+    return readApiResponse(response, true);
   });
+}
+
+function readApiResponse(response, isMutation) {
+  return response.text().then(function(text) {
+    var data;
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      throw new Error(isMutation
+        ? 'We could not confirm whether the CRM saved this change. Refresh the lead before trying again.'
+        : 'The CRM returned an unexpected response. Please refresh.');
+    }
+    if (response.status === 401) {
+      if (!sessionRedirectStarted) {
+        sessionRedirectStarted = true;
+        showToast('Your session expired. Returning to ALDEA…');
+        window.setTimeout(launchFromWorkspace, 800);
+      }
+      throw new Error('Your session expired. Returning to ALDEA…');
+    }
+    if (!response.ok) {
+      throw new Error(data && data.error ? data.error : 'Signal request failed.');
+    }
+    return data;
+  });
+}
+
+function renderControlledOptions(select, options, selectedValue, placeholder) {
+  if (!select) return;
+  var values = (options || []).slice();
+  if (selectedValue && values.indexOf(selectedValue) === -1) values.push(selectedValue);
+  select.innerHTML = '';
+  var emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = placeholder;
+  select.appendChild(emptyOption);
+  values.forEach(function(value) {
+    var option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  });
+  select.value = selectedValue || '';
 }
 
 // ============================================================
@@ -3005,6 +3063,7 @@ function renderLeadDetail() {
   var filterCopyEl = document.getElementById('detail-stage-filter-copy');
   var stageEl = document.getElementById('detail-stage');
   var priorityEl = document.getElementById('detail-priority');
+  var probabilityEl = document.getElementById('detail-probability');
   var unitEl = document.getElementById('detail-unit');
   var nextActionEl = document.getElementById('detail-next-action');
   var nextActionDateEl = document.getElementById('detail-next-action-date');
@@ -3020,7 +3079,7 @@ function renderLeadDetail() {
   var detailSearchEl = document.getElementById('detail-lead-search');
   var detailTitleEl = document.getElementById('detail-lead-title');
   var detailNameInputEl = document.getElementById('detail-lead-name-input');
-  if (!stageEl || !priorityEl || !unitEl || !nextActionEl || !nextActionDateEl || !nextActionOwnerEl || !nationalityEl || !email1El || !email2El || !phoneEl || !interestTypeEl || !typologyEl || !lastContactEl || !contactLogEl) return;
+  if (!stageEl || !priorityEl || !probabilityEl || !unitEl || !nextActionEl || !nextActionDateEl || !nextActionOwnerEl || !nationalityEl || !email1El || !email2El || !phoneEl || !interestTypeEl || !typologyEl || !lastContactEl || !contactLogEl) return;
 
   if (filterChipEl && filterCopyEl) {
     if (selectedDetailStageFilter) {
@@ -3036,7 +3095,11 @@ function renderLeadDetail() {
     if (cardShell) cardShell.classList.add('hidden');
     renderDetailStageOptions('');
     renderDetailPriorityOptions('');
+    renderControlledOptions(nationalityEl, allNationalities, '', 'Select nationality');
+    renderControlledOptions(interestTypeEl, allInterestTypes, '', 'Select interest type');
+    renderControlledOptions(typologyEl, allTypologies, '', 'Select typology');
     priorityEl.value = '';
+    probabilityEl.value = '';
     nextActionEl.value = '';
     nextActionDateEl.value = '';
     nextActionOwnerEl.value = currentSubmitter || '';
@@ -3073,7 +3136,11 @@ function renderLeadDetail() {
   if (detailNameInputEl) detailNameInputEl.value = row.leadName || selectedDetailLead || '';
   renderDetailStageOptions(row.stage || '');
   renderDetailPriorityOptions(row.priority || '');
+  renderControlledOptions(nationalityEl, allNationalities, row.nationality || '', 'Select nationality');
+  renderControlledOptions(interestTypeEl, allInterestTypes, row.interestType || '', 'Select interest type');
+  renderControlledOptions(typologyEl, allTypologies, row.typology || '', 'Select typology');
   priorityEl.value = row.priority || '';
+  probabilityEl.value = formatProbabilityForDetail(row.probability);
   nextActionEl.value = row.nextAction || '';
   nextActionDateEl.value = formatDateForInput(row.nextActionDate);
   nextActionOwnerEl.value = row.nextActionOwner || currentSubmitter || '';
@@ -3114,6 +3181,12 @@ function formatDateForInput(value) {
   var month = String(date.getMonth() + 1).padStart(2, '0');
   var day = String(date.getDate()).padStart(2, '0');
   return year + '-' + month + '-' + day;
+}
+
+function formatProbabilityForDetail(value) {
+  var probability = parseProbabilityValue(value);
+  if (probability === null) return '';
+  return Math.round(probability * 100) + '%';
 }
 
 function coerceDisplayDate(value) {

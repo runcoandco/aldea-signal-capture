@@ -3,7 +3,12 @@ const assert = require("node:assert/strict");
 const { createHmac } = require("node:crypto");
 
 process.env.SIGNAL_TASK_SYNC_SECRET = "test-only-secret";
-const { createSessionToken, verifyLaunchToken, verifySessionToken } = require("../lib/signal-auth");
+const {
+  createSessionToken,
+  SESSION_TTL_SECONDS,
+  verifyLaunchToken,
+  verifySessionToken
+} = require("../lib/signal-auth");
 
 function launchToken(payload) {
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -30,5 +35,9 @@ test("creates and verifies a bounded session", () => {
   const now = Date.now();
   const token = createSessionToken({ owner: "Test User", role: "admin" }, now);
   assert.deepEqual(verifySessionToken(token, now), { owner: "Test User", role: "admin" });
-  assert.equal(verifySessionToken(token, now + 60 * 60 * 1000 + 1), null);
+  assert.equal(verifySessionToken(token, now + SESSION_TTL_SECONDS * 1000 + 1), null);
+});
+
+test("keeps a signed session within one working day", () => {
+  assert.equal(SESSION_TTL_SECONDS, 8 * 60 * 60);
 });

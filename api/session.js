@@ -17,9 +17,9 @@ module.exports = async function handler(request, response) {
   try {
     if (request.method === "GET") {
       const session = sessionFromRequest(request);
-      return session
-        ? response.status(200).json({ success: true, ...session })
-        : response.status(401).json({ success: false, error: "Unauthorized" });
+      if (!session) return response.status(401).json({ success: false, error: "Unauthorized" });
+      setSessionCookie(response, createSessionToken(session));
+      return response.status(200).json({ success: true, ...session });
     }
 
     if (request.method === "POST") {

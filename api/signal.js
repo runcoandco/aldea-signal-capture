@@ -1,4 +1,9 @@
-const { isSameOrigin, sessionFromRequest } = require("../lib/signal-auth");
+const {
+  createSessionToken,
+  isSameOrigin,
+  sessionFromRequest,
+  setSessionCookie
+} = require("../lib/signal-auth");
 
 const DEFAULT_TASK_MANAGER_URL = "https://aldea-task-manager.vercel.app/api/sync/signal-task";
 
@@ -7,7 +12,10 @@ async function readJsonResponse(response) {
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error(`Invalid JSON response (${response.status})`);
+    const error = new Error("The CRM returned an unexpected response.");
+    error.code = "UPSTREAM_INVALID_RESPONSE";
+    error.upstreamStatus = response.status;
+    throw error;
   }
 }
 
@@ -26,6 +34,7 @@ module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
   const session = sessionFromRequest(request);
   if (!session) return response.status(401).json({ success: false, error: "Unauthorized" });
+  setSessionCookie(response, createSessionToken(session));
 
   try {
     const scriptUrl = process.env.SIGNAL_SCRIPT_URL;
@@ -98,6 +107,16 @@ module.exports = async function handler(request, response) {
       });
     }
   } catch (error) {
+    if (error && error.code === "UPSTREAM_INVALID_RESPONSE") {
+      return response.status(502).json({
+        success: false,
+        code: error.code,
+        unknownOutcome: request.method === "POST",
+        error: request.method === "POST"
+          ? "We could not confirm whether the CRM saved this change. Refresh the lead before trying again."
+          : "The CRM returned an unexpected response. Please try refreshing."
+      });
+    }
     return response.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Signal request failed"
